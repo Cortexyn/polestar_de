@@ -2714,17 +2714,64 @@ test('resurrections: accepted after the corpse delay while still offered; never 
 		stub.keys.shift = true; r.shift = offer("Priest"); stub.keys.shift = false
 		s.corpseDelay = 5
 		r.early = offer("Priest")
+		s.corpseDelay = 0        -- the delay runs out
 		stub.advance(6)
 		r.late = #calls("AcceptResurrect")
 		q.calls = {}
+		s.corpseDelay = 5
 		offer("Priest")
 		s.offerer = nil          -- declined or timed out meanwhile
+		s.corpseDelay = 0
 		stub.advance(6)
 		r.withdrawn = #calls("AcceptResurrect")
 		emit(r)
 	`);
 	assert.equal(out[0], 0, 'off by default');
 	assert.deepEqual(out[1], { now: 1, msg: true, combat: 0, hardcore: 0, shift: 0, early: 0, late: 1, withdrawn: 0 });
+});
+
+// One offer from the Priest, waiting out a 5 s corpse delay; `between` runs
+// during the wait, then the delay runs out (or `left` seconds remain).
+const WAITED = `
+	local s = q.social
+	set("acceptResurrect", true)
+	local function waited(between, left)
+		q.calls = {}
+		s.corpseDelay = 5
+		s.offerer = "Priest"; stub.fire("RESURRECT_REQUEST", "Priest")
+		between()
+		s.corpseDelay = left or 0
+		stub.advance(6)
+		s.offerer, s.combat.Druid = nil, nil
+		return #calls("AcceptResurrect")
+	end
+`;
+
+test('resurrections: an old callback cannot accept another caster\'s offer, in combat, changed without an event or replacing it', () => {
+	const [got] = run(`${WAITED}
+		emit({
+			same = waited(function() end),
+			combatOffer = waited(function() s.offerer = "Druid"; s.combat.Druid = true; stub.fire("RESURRECT_REQUEST", "Druid") end),
+			changed = waited(function() s.offerer = "Druid" end),
+			replaced = waited(function() s.offerer = "Druid"; stub.fire("RESURRECT_REQUEST", "Druid") end),
+		})
+	`);
+	assert.deepEqual(got, { same: 1, combatOffer: 0, changed: 0, replaced: 1 });
+});
+
+test('resurrections: life transitions, the setting off and on, or a corpse delay still running drop the waiting offer', () => {
+	const [got] = run(`${WAITED}
+		local function fire(e) return function() stub.fire(e) end end
+		emit({
+			alive = waited(fire("PLAYER_ALIVE")),
+			unghost = waited(fire("PLAYER_UNGHOST")),
+			dead = waited(fire("PLAYER_DEAD")),
+			logout = waited(fire("PLAYER_LOGOUT")),
+			offOn = waited(function() set("acceptResurrect", false); set("acceptResurrect", true) end),
+			delayed = waited(function() end, 3),
+		})
+	`);
+	assert.deepEqual(got, { alive: 0, unghost: 0, dead: 0, logout: 0, offOn: 0, delayed: 0 });
 });
 
 test('party invitations: friends joined (dialog marked accepted), strangers declined when asked; role checks, queues and Shift ask', () => {
