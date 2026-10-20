@@ -1130,6 +1130,35 @@ test('merchant: repairs after selling, if affordable; Shift and settings off do 
 	assert.equal(out[3], 0, 'off: nothing');
 });
 
+test('merchant: sales still queued stop when junk sales are turned off (even back on), Shift is held, you log out or another merchant opens with Shift', () => {
+	const visit = (between) => run(`${BAGS}
+		q.bags[1].size = 12
+		for i = 9, 12 do q.addItem(1, i, 1, 1) end
+		q.money = 1000
+		q.repair = { can = true, cost = 50 }
+		q.openMerchant()                 -- the first tick sells 6 of the 10 queued slots
+		${between}
+		stub.advance(2)
+		emit({ sold = #q.sold, repaired = #calls("RepairAllItems") })
+	`)[0];
+	const got = {
+		off: visit('set("sellJunk", false)'),
+		offOn: visit('set("sellJunk", false); set("sellJunk", true)'),
+		shift: visit('stub.keys.shift = true'),
+		logout: visit('stub.fire("PLAYER_LOGOUT")'),
+		nextVisit: visit('stub.keys.shift = true; q.openMerchant()'),
+		left: visit(''),
+	};
+	assert.deepEqual(got, {
+		off: { sold: 6, repaired: 1 },
+		offOn: { sold: 6, repaired: 1 },
+		shift: { sold: 6, repaired: 0 },
+		logout: { sold: 6, repaired: 0 },
+		nextVisit: { sold: 6, repaired: 0 },
+		left: { sold: 10, repaired: 1 },
+	});
+});
+
 // ---------------------------------------------------------------------------
 // Buying for the step's buy goals
 // ---------------------------------------------------------------------------

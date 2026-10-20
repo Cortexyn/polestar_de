@@ -33,6 +33,7 @@ local queue = {}          -- { bag, slot, itemID, ... } flattened triples
 local qi, qn = 1, 0
 local sold, earned = 0, 0
 local ticker
+local generation = 0
 
 -- A slot holding a grey item worth money: itemID, stack count, price per item.
 local function junkAt(bag, slot)
@@ -78,13 +79,14 @@ local function repair()
 end
 
 local function finish()
+	generation = generation + 1
 	stop()
 	if sold > 0 then
 		ns.Print(format(sold == 1 and L["Sold %d grey item for %s."] or L["Sold %d grey items for %s."], sold, QoL.Money(earned)))
 	end
 	sold, earned = 0, 0
 	qi, qn = 1, 0
-	if open then
+	if open and not QoL.Shift() then
 		repair()
 		QoL.Buy.Run()
 	end
@@ -93,6 +95,11 @@ end
 local function step()
 	if not open then
 		stop()
+		return
+	end
+	if not QoL.On("sellJunk") or QoL.Shift() then
+		generation = generation + 1
+		finish()
 		return
 	end
 	local done = 0
@@ -111,9 +118,11 @@ local function step()
 end
 
 function Vendor.OnMerchantShow()
+	generation = generation + 1
+	stop()
 	open = true
-	if QoL.Shift() then return end
 	sold, earned, qi, qn = 0, 0, 1, 0
+	if QoL.Shift() then return end
 	if QoL.On("sellJunk") then
 		for bag = 0, Client.NumBags() do
 			for slot = 1, Client.NumSlots(bag) do
@@ -133,11 +142,13 @@ function Vendor.OnMerchantShow()
 	step()
 	if qi <= qn and C_Timer and C_Timer.NewTicker then
 		stop()
-		ticker = C_Timer.NewTicker(INTERVAL, step)
+		local gen = generation
+		ticker = C_Timer.NewTicker(INTERVAL, function() if gen == generation then step() end end)
 	end
 end
 
 function Vendor.OnMerchantClosed()
+	generation = generation + 1
 	open = false
 	if qn > 0 and sold > 0 then finish() else stop() end
 	qi, qn = 1, 0
@@ -145,3 +156,10 @@ end
 
 ns.RegisterEvent("MERCHANT_SHOW", Vendor.OnMerchantShow)
 ns.RegisterEvent("MERCHANT_CLOSED", Vendor.OnMerchantClosed)
+ns.RegisterEvent("PLAYER_LOGOUT", Vendor.OnMerchantClosed)
+ns.On("SETTING_CHANGED", function(path)
+	if (path == "qol.sellJunk" or path == "qol" or path == "") and not QoL.On("sellJunk") and qn > 0 then
+		generation = generation + 1
+		finish()
+	end
+end)
