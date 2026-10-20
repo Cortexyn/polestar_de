@@ -77,8 +77,19 @@ local function finish(short, shortCost)
 	end
 end
 
+local function cancel()
+	purchases = purchases + 1
+	-- A purchase that has already landed still counts in the summary.
+	if active and pending and not stillAvailable(pending) then
+		learned, spent = learned + 1, spent + pendingCost
+	end
+	pending = nil
+	finish()
+end
+
 local function buyNext()
 	if not active then return end
+	if not QoL.On("trainAll") or QoL.Shift() then cancel(); return end
 	if pending then
 		if stillAvailable(pending) then return end
 		learned, spent = learned + 1, spent + pendingCost
@@ -124,3 +135,7 @@ end
 ns.RegisterEvent("TRAINER_SHOW", Trainer.OnShow)
 ns.RegisterEvent("TRAINER_UPDATE", buyNext)
 ns.RegisterEvent("TRAINER_CLOSED", Trainer.OnClosed)
+ns.RegisterEvent("PLAYER_LOGOUT", cancel)
+ns.On("SETTING_CHANGED", function(path)
+	if (path == "qol.trainAll" or path == "qol" or path == "") and not QoL.On("trainAll") then cancel() end
+end)

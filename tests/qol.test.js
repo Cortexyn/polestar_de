@@ -1610,6 +1610,38 @@ test('trainer: riding, weapon and pet trainers are left alone, so opening one to
 	assert.deepEqual(out, [0, 0, 0]);
 });
 
+test('trainer: turning training off (even back on), holding Shift or logging out while a purchase is on its way buys nothing more', () => {
+	const purchases = (between) => run(`${SPELLS}
+		set("trainAll", true)
+		q.money = 1000
+		q.openTrainer()                  -- the first purchase is on its way
+		${between}
+		stub.advance(3)
+		emit(#calls("BuyTrainerService"))
+	`)[0];
+	const got = {
+		off: purchases('set("trainAll", false)'),
+		offOn: purchases('set("trainAll", false); set("trainAll", true)'),
+		shift: purchases('stub.keys.shift = true'),
+		logout: purchases('stub.fire("PLAYER_LOGOUT")'),
+		closed: purchases('q.closeTrainer()'),
+		left: purchases(''),
+	};
+	assert.deepEqual(got, { off: 1, offOn: 1, shift: 1, logout: 1, closed: 1, left: 2 });
+});
+
+test('trainer: a purchase that has landed when Shift stops the run is still counted in the summary', () => {
+	const [out] = run(`${SPELLS}
+		set("trainAll", true)
+		q.money = 1000
+		q.openTrainer()
+		stub.keys.shift = true           -- held as the first purchase lands
+		stub.advance(3)
+		emit({ bought = #calls("BuyTrainerService"), money = q.money, msg = printed("Learned 1 spell for 1s 0c") })
+	`);
+	assert.deepEqual(out, { bought: 1, money: 900, msg: true });
+});
+
 // ---------------------------------------------------------------------------
 // Quest rewards
 // ---------------------------------------------------------------------------
