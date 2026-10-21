@@ -31,7 +31,10 @@ Read it before writing a guide.
 - **Routes a player can do alone.** A leveling guide never requires an elite,
   a dungeon or a group quest: lint stops required elite work. Group content
   goes in as an `optional` goal with the tip `<Name> is elite: grouping up is
-  advised.`
+  advised.` To let the player choose a group quest or a dungeon, put its
+  steps under `when group <quest>` or `when dungeon "<Name>"` and the solo
+  way under `when !group` / `when !dungeon` (Polestar 0.3.0); elite goals
+  there stay `optional` all the same.
 - **The author's own material only.** Write from the author's notes, routes
   they played (`polestar record`) or guides they wrote. Never copy text, step
   lists or routes from guides you did not write, Polestar's own guides
@@ -76,6 +79,9 @@ Read it before writing a guide.
    `id` of the mob, item or object it needs: use that id in the `kill`,
    `collect` or `interact`, not one found by name (a name search for
    "Mottled Boar" also returns Dire and Elder Mottled Boars).
+   Zone and area names (`enter`, `when zone`, `when subzone`) have no `find`
+   kind: take them from the author, as the game spells them, and let lint
+   check them.
 
 3. **Write the guide** in `guides/<name>.guide` with the ids found. Keep a
    step to one place or one batch of work. A step is done when every goal in
