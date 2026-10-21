@@ -14,8 +14,11 @@
 -- When it writes: in the world, at login (after five seconds), on level-ups,
 -- XP, zone, money, skill and tab changes (coalesced into one write every ten
 -- seconds), on resting changes at once, and at once when the player asks to
--- leave (Logout and Quit, PLAYER_CAMPING, PLAYER_QUITING). It writes NOTHING
--- read from the client on PLAYER_LEAVING_WORLD or PLAYER_LOGOUT, only `seen`:
+-- leave (PLAYER_CAMPING, PLAYER_QUITING). While the player is resting (an inn
+-- or city) those frequent events write at once too, so an instant logout there
+-- leaves the entry current. Logout() and Quit() are protected and not hooked.
+-- It writes NOTHING read from the client on PLAYER_LEAVING_WORLD or
+-- PLAYER_LOGOUT, only `seen`:
 -- the client answers those reads wrongly while the world goes (resting false,
 -- no gold, no map, the indoor area for the zone), plausibly enough that
 -- nothing can tell. Writes merge into the entry, so a field that does not
@@ -195,7 +198,8 @@ function Alts.Write(silent, touch)
 end
 
 -- One write at most every DELAY seconds however often the events come: one
--- pending timer. A write made at once (logout) retires it, so a timer from
+-- pending timer. A write made at once (camping, quitting, any change while
+-- resting) retires it, so a timer from
 -- before it does nothing when it fires.
 local pending, gen = false, 0
 
@@ -214,12 +218,16 @@ local function schedule(delay)
 	end
 end
 
-local function later() schedule(DELAY) end
-
 local function now()
 	gen = gen + 1
 	pending = false
 	Alts.Write()
+end
+
+-- The frequent events: coalesced, except while resting, when an instant
+-- logout is possible and nothing else would catch the change.
+local function later()
+	if Compat.Readable(IsResting and IsResting()) then now() else schedule(DELAY) end
 end
 
 -- The world is going (PLAYER_LEAVING_WORLD, PLAYER_LOGOUT): the client reads
@@ -317,19 +325,7 @@ end
 
 local EVENTS = { "PLAYER_LEVEL_UP", "PLAYER_XP_UPDATE", "ZONE_CHANGED_NEW_AREA", "PLAYER_MONEY", "SKILL_LINES_CHANGED" }
 local REQUESTS = { "PLAYER_CAMPING", "PLAYER_QUITING" } -- the player asked to leave: still in the world
-local started, tabsHandle, hooked = false, nil, false
-
--- Logout() and Quit() are the last moment the client still answers right.
--- A hook cannot be removed, so it checks `started`.
-local function hookRequests()
-	if hooked or not hooksecurefunc then return end
-	hooked = true
-	for _, name in ipairs({ "Logout", "Quit" }) do
-		if type(_G[name]) == "function" then
-			hooksecurefunc(name, function() if started then now() end end)
-		end
-	end
-end
+local started, tabsHandle = false, nil
 
 -- Listening only while alts.enabled is on.
 local function start()
@@ -341,7 +337,6 @@ local function start()
 	for _, ev in ipairs(REQUESTS) do ns.RegisterEvent(ev, now) end -- an event this client lacks is skipped
 	ns.RegisterEvent("PLAYER_LEAVING_WORLD", leaving)
 	ns.RegisterEvent("PLAYER_LOGOUT", leaving)
-	hookRequests()
 end
 
 local function stop()

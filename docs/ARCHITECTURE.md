@@ -4482,9 +4482,12 @@ Polestar.Alts.IsCurrent(entry), Polestar.Alts.MaxLevel(), Polestar.Alts.Enabled(
 - **Writes.** All in the world: at login (after five seconds, once the tabs
   exist), on resting changes at once, on level-ups, XP, zone, money, skill and
   tab changes coalesced into one write every ten seconds (a single pending
-  timer), and at once when the player asks to leave (`Logout` and `Quit`,
-  hooked with `hooksecurefunc`, and `PLAYER_CAMPING` / `PLAYER_QUITING` where
-  the client has them). Also when the Characters page is drawn (so the playing
+  timer) while not resting, and at once while `IsResting()` reads true, and at
+  once when the player asks to leave (`PLAYER_CAMPING` / `PLAYER_QUITING`
+  where the client has them). `Logout` and `Quit` are protected functions and
+  are not hooked; writing at once while resting (an inn or city, where an
+  instant logout is possible) is what leaves the saved entry current when
+  they are used. Also when the Characters page is drawn (so the playing
   character is current there) and when `alts.enabled` is turned on. A write merges into the entry: a field that does not
   read keeps its saved value; the zone is the zone-type map above the player's
   map, not an indoor area's name. `PLAYER_LEAVING_WORLD` and `PLAYER_LOGOUT`

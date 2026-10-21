@@ -65,6 +65,7 @@ emit(PolestarDB.alts.chars["Testchar-Test Realm"])`);
 
 test('frequent events coalesce into one write after the delay; asking to leave writes at once', () => {
 	const [out] = run(`
+IsResting = function() return false end
 stub.advance(6)
 local writes = 0
 local write = Alts.Write
@@ -334,6 +335,7 @@ emit(PolestarDB.alts.chars["Testchar-Test Realm"].tabs[1].complete)`);
 
 test('one pending write at most: the login timer and the event timer never stack', () => {
 	const [out] = run(`
+IsResting = function() return false end
 local writes = 0
 local write = Alts.Write
 Alts.Write = function(...) writes = writes + 1; return write(...) end
@@ -404,6 +406,7 @@ emit({ before = before, after = snap(), bumped = c().seen > seen })`);
 
 test('leaving the world and logout leave a pending write alone', () => {
 	const [out] = run(`
+IsResting = function() return false end
 stub.advance(6)
 stub.world.setMoney(321)
 stub.fire("PLAYER_LEAVING_WORLD")
@@ -420,8 +423,9 @@ emit(PolestarDB.alts == nil or next(PolestarDB.alts.chars) == nil)`);
 	assert.equal(out, true);
 });
 
-test('the Logout hook, Quit hook and PLAYER_CAMPING each write the in-world values at once and retire the pending timer', () => {
+test('PLAYER_QUITING and PLAYER_CAMPING each write the in-world values at once and retire the pending timer', () => {
 	const [out] = run(`
+IsResting = function() return false end
 local writes = 0
 local write = Alts.Write
 Alts.Write = function(...) writes = writes + 1; return write(...) end
@@ -429,12 +433,6 @@ stub.advance(6)
 writes = 0
 local c = function() return PolestarDB.alts.chars["Testchar-Test Realm"] end
 local got = {}
-stub.world.setMoney(11)
-Logout()
-got.logout = { c().money, writes }
-stub.world.setMoney(22)
-Quit()
-got.quit = { c().money, writes }
 stub.world.setMoney(33)
 stub.fire("PLAYER_QUITING")
 got.quiting = { c().money, writes }
@@ -443,12 +441,45 @@ stub.fire("PLAYER_CAMPING")
 got.camping = { c().money, writes }
 stub.advance(30)
 got.after = writes
-emit(got)`, { before: 'Logout = function() end; Quit = function() end' });
-	assert.deepEqual(out.logout, [11, 1]);
-	assert.deepEqual(out.quit, [22, 2]);
-	assert.deepEqual(out.quiting, [33, 3]);
-	assert.deepEqual(out.camping, [44, 4]);
-	assert.equal(out.after, 4, 'no timer fires after them');
+emit(got)`);
+	assert.deepEqual(out.quiting, [33, 1]);
+	assert.deepEqual(out.camping, [44, 2]);
+	assert.equal(out.after, 2, 'no timer fires after them');
+});
+
+test('resting: a money and an XP change write at once (no timer)', () => {
+	const [out] = run(`
+stub.advance(6)
+local writes = 0
+local write = Alts.Write
+Alts.Write = function(...) writes = writes + 1; return write(...) end
+local c = function() return PolestarDB.alts.chars["Testchar-Test Realm"] end
+stub.world.setMoney(77)
+local a = { writes, c().money }
+stub.world.setXP(2500, 4000)
+local b = { writes, c().xp }
+stub.advance(30)
+emit({ a = a, b = b, after = writes })`);
+	assert.deepEqual(out.a, [1, 77]);
+	assert.deepEqual(out.b, [2, 2500]);
+	assert.equal(out.after, 2, 'no timer');
+});
+
+test('not resting: they coalesce', () => {
+	const [out] = run(`
+IsResting = function() return false end
+stub.advance(6)
+local writes = 0
+local write = Alts.Write
+Alts.Write = function(...) writes = writes + 1; return write(...) end
+local c = function() return PolestarDB.alts.chars["Testchar-Test Realm"] end
+stub.world.setMoney(77)
+stub.world.setXP(2500, 4000)
+local early = { writes, c().money }
+stub.advance(11)
+emit({ early = early, late = { writes, c().money, c().xp } })`);
+	assert.deepEqual(out.early, [0, 124000]);
+	assert.deepEqual(out.late, [1, 77, 2500]);
 });
 
 test('PLAYER_UPDATE_RESTING writes resting at once', () => {
