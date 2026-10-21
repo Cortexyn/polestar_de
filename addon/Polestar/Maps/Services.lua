@@ -69,15 +69,17 @@ function Maps.BuildServicePins(records)
 	local observations = {}
 	local function repeatedSpawn(record, spawn, mailbox)
 		local c, wx, wy = ns.Compat.MapToWorld(spawn.map, spawn.x, spawn.y, spawn.f)
-		if not c then return false end
 		local key = mailbox and "mailbox" or (record.kind or "npc") .. ":" .. record.id
 		local points = observations[key] or {}
 		local radius2 = mailbox and 100 or 225
 		for _, point in ipairs(points) do
-			if point.c == c and (point.wx - wx) ^ 2 + (point.wy - wy) ^ 2 <= radius2 then return true end
+			-- Codex uses a 3% map radius for places; exact service observations still need that display grouping.
+			if not mailbox and point.spawn.map == spawn.map and (point.spawn.f or "l") == (spawn.f or "l")
+				and (point.spawn.x - spawn.x) ^ 2 + (point.spawn.y - spawn.y) ^ 2 <= 9 then return true end
+			if c and point.c == c and (point.wx - wx) ^ 2 + (point.wy - wy) ^ 2 <= radius2 then return true end
 		end
-		-- Retain an original location: 15 yards per NPC, 10 for mailboxes shared across object IDs.
-		points[#points + 1] = { c = c, wx = wx, wy = wy }
+		-- Retain original locations; world distance also matches overlapping maps (mailboxes keep 10 yards).
+		points[#points + 1] = { spawn = spawn, c = c, wx = wx, wy = wy }
 		observations[key] = points
 		return false
 	end
