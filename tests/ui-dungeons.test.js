@@ -440,6 +440,21 @@ test('Quests: one block per quest with state, level, flags, objective, start and
 	assert.equal(out.tip, true, 'item hover shows the game tooltip');
 });
 
+test('Quest cards group the details and mark the next unfinished chain step', () => {
+	const [out] = run(`
+		done[1490] = nil
+		Polestar.Dungeons.Open("wailing-caverns")
+		local fang = block(914)
+		local step = fang.Chains[1]
+		emit({ panel = fang.psSkin ~= nil, rule = fang.HeadRule:IsShown(), rewards = fang.MoreLabel:IsShown(), objective = fang.Obj:GetText(),
+			step = { step.Number:GetText(), step.Number:IsShown(), step.Highlight:IsShown(), step.Glyph:IsShown() } })`);
+	assert.equal(out.panel, true);
+	assert.equal(out.rule, true);
+	assert.equal(out.rewards, true);
+	assert.match(out.objective, /^\u2022  /);
+	assert.deepEqual(out.step, ['1', true, true, false]);
+});
+
 test('Quests: too low shows the level it opens at; the other faction is counted when none are left', () => {
 	const [out] = run(`
 		uistub.player.level = 12
