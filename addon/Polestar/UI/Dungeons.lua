@@ -24,13 +24,15 @@
 -- quests still to do are worth in levels (Dungeons.QuestXP); hovering it
 -- opens a panel with the XP, a bar of the levels it spans (earned, then
 -- gained) and what was counted.
---   Quests: one panel per quest: the readable name, this character's
+--   Quests: one panel per quest: the name in its difficulty colour (lifted
+--   to 4.5:1 on the ground) above a rule, this character's
 --   state (done, in the log, ready, too low), level and requirement,
 --   faction, shareable, picked up inside; a label column with the
 --   objective, where it starts and ends (each with a pin that sets the
 --   arrow; the whole Starts line is a link to the giver, or to the first
 --   prerequisite still to do), the chain before it (one line per quest,
---   each with its own pin; hovering one shows that quest's levels, state,
+--   each with its own pin, the steps still to do numbered and the next one
+--   on an accent ground; hovering one shows that quest's levels, state,
 --   objective, start and end, rewards and its XP at the character's level)
 --   and the rewards (item icons in quality borders, "Choose one", XP, money,
 --   reputation; after a chain still to do, a chip of what the quest and its
@@ -1398,8 +1400,9 @@ local function paintQuest(b, q, p, top, plevel, key)
 	b.Glyph:SetTexture(Theme.Media(g[1]))
 	W.Color(b.Glyph, g[2])
 	b.Title:SetText(q.title or (L["Quest"] .. " " .. tostring(q.id)))
-	-- Keep quest names legible; the state glyph and chip carry the status.
-	W.Color(b.Title, state == "done" and "textMuted" or "text")
+	-- Done: the muted text colour (held legible), its chip says so; else the
+	-- quest's difficulty colour, as on the Attunement tab and in the quest log.
+	if state == "done" then W.Color(b.Title, "textMuted") else paintRGB(b.Title, difficulty(q.level, plevel)) end
 	-- Right of the title line: the state, then the faction mark.
 	local right = PAD
 	local text, kind = stateChip(state, q)
@@ -1518,7 +1521,8 @@ local function paintQuest(b, q, p, top, plevel, key)
 				r.Number:Show()
 			end
 			r.Title:SetText(cq.title or (L["Quest"] .. " " .. tostring(id)))
-			W.Color(r.Title, cs == "done" and "textMuted" or marked and "accent" or "text")
+			-- The next step is marked by its ground; titles keep the difficulty colour.
+			if cs == "done" then W.Color(r.Title, "textMuted") else paintRGB(r.Title, difficulty(cq.level, plevel)) end
 			local sub = {}
 			if cq.level then sub[#sub + 1] = format(L["Level %d"], cq.level) end
 			local st = startOf(cq, ns.PlayerPoint())
