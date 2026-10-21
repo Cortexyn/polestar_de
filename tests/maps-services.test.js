@@ -309,7 +309,7 @@ test('the records kept for filter changes are slim and friendly only', () => {
   assert.deepEqual(out, { fields: ['faction', 'id', 'name', 'roles', 'spawns', 'subName'], shared: false, enemy: true, hostileBox: true, box: 'object' });
 });
 
-test('services are opt-in with a lean category set, leave flight masters and inns to the travel layers, and use the native bag for vendors and a distinct chest for bankers', () => {
+test('services are opt-in with a lean category set, leave flight masters and inns to the travel layers, and use the vendor gossip icon and a distinct chest for bankers', () => {
   const [out, weapon] = run(`
     local icons,on={},{}
     for _,category in ipairs(M.ServiceCategories) do
@@ -326,7 +326,7 @@ test('services are opt-in with a lean category set, leave flight masters and inn
     on: ['mailbox', 'class'],
     inn: true,
     flight: true,
-    vendor: 'Interface\\Minimap\\Tracking\\Banker',
+    vendor: 'Interface\\GossipFrame\\VendorGossipIcon',
     banker: 'Interface\\Icons\\INV_Misc_TreasureChest01a',
     reads: 0,
   });

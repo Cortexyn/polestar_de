@@ -22,7 +22,7 @@ local CATEGORIES = {
 	{ key = "spirithealer", label = L["Spirit healers"], icon = "Interface\\Icons\\Spell_Holy_GuardianSpirit" },
 	{ key = "stablemaster", label = L["Stable masters"], texture = "StableMaster" },
 	{ key = "trainer", label = L["Profession trainers"], texture = "Profession" },
-	{ key = "vendor", label = L["Vendors"], texture = "Banker" },
+	{ key = "vendor", label = L["Vendors"], icon = "Interface\\GossipFrame\\VendorGossipIcon" },
 }
 Maps.ServiceCategories = CATEGORIES
 local filters = {}
