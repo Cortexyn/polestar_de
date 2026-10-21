@@ -117,6 +117,13 @@ function world.addItem(id, n)
 	fire("BAG_UPDATE_DELAYED")
 end
 
+-- Destroys the whole stack, as the client's delete does.
+function world.removeItem(id)
+	world.items[id] = nil
+	fire("BAG_UPDATE", 0)
+	fire("BAG_UPDATE_DELAYED")
+end
+
 function world.bind(location)
 	world.bindLocation = location
 	fire("HEARTHSTONE_BOUND")

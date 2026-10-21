@@ -82,6 +82,7 @@ Before the first `step`. `guide`, `title`, `levels` and `zone` are required.
 | `accept <quest> ["Title"]` | Take a quest; the giver and title come from the data | `accept 783` |
 | `turnin <quest> ["Title"]` | Hand a quest in | `turnin 783` |
 | `lvl <N>` | On `accept`: the level the quest needs, shown beside it | `accept 7 lvl 2` |
+| `abandon <quest> ["Title"]` | Drop a quest from the log; done once it is out, and its `accept` stays done (needs Polestar 0.3.0) | `abandon 783` |
 | `complete <quest> ["Title"]` | Finish every objective of a quest; give it a place (`@x,y`, or a `goto` before it) when its objectives have one, or the arrow has nowhere to point | `complete 7 @48.5,31.0` |
 | `npc <id>` | Which NPC gives or takes the quest, when the data knows several | `accept 5261 npc 196` |
 | `object <id>` / `item <id>` | The same for a quest started or ended at an object, or started by an item | `accept 9400 object 1617` |
@@ -112,6 +113,7 @@ Before the first `step`. `guide`, `title`, `levels` and `zone` are required.
 | `vendor nearest` / `vendor <npc>` | Sell and repair, at the closest vendor or that one | `vendor nearest` |
 | `buy <item> ["Name"]` | Buy an item; `nearest` picks the closest vendor selling it | `buy 159 x5 nearest` |
 | `money <amount>` | Hold that much money (`1g50s`, `7s`, `25c` or copper); stays done for the rest of the step (needs Polestar 0.3.0) | `money 1s` |
+| `destroy <item> ["Name"]` | Delete an item from the bags; done once the bags hold none (needs Polestar 0.3.0) | `destroy 6948 "Hearthstone"` |
 | `task "<text>"` | Something Polestar cannot see: the player ticks it, and it holds the step until then unless `optional` (needs Polestar 0.3.0) | `task "Tame a Venomtail Scorpid"` |
 
 ## Professions

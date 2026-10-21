@@ -15,7 +15,7 @@ The handbook is [PACKS.md](PACKS.md).
 **On this page:** [`pack.json`](#packjson) ·
 [The addon](#the-addon) · [TOC fields](#toc-fields) ·
 [Rules Polestar enforces](#rules-polestar-enforces) ·
-[Format 3](#format-3) · [Format 4](#format-4) · [Import strings](#import-strings) · [Versioning](#versioning)
+[Format 3](#format-3) · [Format 4](#format-4) · [Format 5](#format-5) · [Import strings](#import-strings) · [Versioning](#versioning)
 
 A community addon is an addon for World of Warcraft: Forever that depends
 on Polestar and registers guides with it. It is built from a pack: a folder
@@ -328,7 +328,7 @@ list refuses the guide.
 
 ## Format 5
 
-Format 4 with the **`money`**, **`task`**, **`enter`** and **`cast`** goals, the **`money`**,
+Format 4 with the **`money`**, **`task`**, **`enter`**, **`cast`**, **`abandon`** and **`destroy`** goals, the **`money`**,
 **`dungeon`**, **`upgrade`**, **`done`**, **`skill`**, **`cooldown`** and **`group`**
 `when` predicates (on a step or a `next` option; `done` on a step only) and a step's
 **`skipto`** jumps. Polestar 0.3.0 and later read it.
@@ -398,6 +398,16 @@ skipto").
 { title = "Fetch the letter", goals = { ... } },
 { title = "The camp", label = "camp", goals = { ... } },
 ```
+
+`abandon` goal: `{ t = "abandon", quest = <id>, title = "<title>" }`. Done once
+the quest is out of the log (never taken, abandoned or turned in alike). A
+`quest` or `title` that is missing or of the wrong type refuses the guide. The
+quest's `accept` goals stay done once the guide has abandoned it, so the route
+is not sent back to the giver; a player's own abandon still reopens the
+`accept`.
+
+`destroy` goal: `{ t = "destroy", item = <id>, itemName = "<name>" }`. Done
+once the bags hold none of the item; stays done for the rest of its step.
 
 ### `RegisterPack(meta)`
 
@@ -492,6 +502,8 @@ frame; absent: the live frame), `r` (arrival radius in yards), `spots`
 | `accept` | `quest`, `title` | `npc`/`npcName`, `object`/`objName`, `item`/`itemName`, `minLevel`, `qlvl`, `pre`, `preAll`, `closedBy`, `preTitles` |
 | `turnin` | `quest`, `title` | `npc`/`npcName`, `object`/`objName`, `rewards = { choices = { { item, itemName, quality } }, items = { ... }, xp, money }`, `direct` |
 | `complete` | `quest`, `title` | — |
+| `abandon` | `quest`, `title` (format 5) | — |
+| `destroy` | `item`, `itemName` (format 5) | — |
 | `kill` | `target` | `title`, `npc`, `count`, `quest`, `oi`, `spread` |
 | `collect` | `item`, `itemName` | `title`, `count`, `quest`, `oi`, `spread`, `from`, `fromAlso`, `fromId`, `fromAlsoId`, `fromKind`, `fromRank`, `fromFaction`, `fromNpcs`, `npc`, `npcName`, `candidates` |
 | `goto` | `map`, `x`, `y` | `text`, `r`, `area` |
@@ -604,7 +616,7 @@ wrap it). The payload is JSON:
 
 | Key | Required | Value |
 |---|---|---|
-| `format` | yes | the guide data's format (above): 5 when the guide uses `money`/`task`/`enter`/`cast` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
+| `format` | yes | the guide data's format (above): 5 when the guide uses `money`/`task`/`enter`/`cast`/`abandon`/`destroy` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
 | `license` | yes | the licence of the guide, from the pack's `pack.json` |
 | `guide` | yes | one guide exactly as `RegisterGuide(def)` takes it, without `pack`: the keys above, numbers rounded as `Guides.lua` writes them, `preTitles` with the quest ids as the object's keys |
 | `frames` | no | `RegisterMapFrames`'s `era` table for the maps its goals use, by uiMapID. Polestar takes a frame only for a map the guide's goals or their smart targets stand on, and only where no one (Polestar, a community addon, an earlier import) has registered one |
@@ -651,7 +663,7 @@ or nothing (equal or lower). Imported guides are listed in the guide menu as
   later, format 2 (the `group`, `reward` and `why` keys) by 0.2.4 and later,
   format 3 (name tokens) by 0.2.5 and later, format 4 (a step's `when`,
   `along` and `label`, a `level` goal's `frac`, a guide's `nextWhen`) by 0.2.6
-  and later, format 5 (the `money`, `task`, `enter` and `cast` goals, the `money`, `dungeon`,
+  and later, format 5 (the `money`, `task`, `enter`, `cast`, `abandon` and `destroy` goals, the `money`, `dungeon`,
   `upgrade`, `done`, `skill`, `cooldown` and `group` when predicates, a step's
   `skipto`) by 0.3.0 and later.
 - A pack in a format this Polestar does not read registers nothing; the

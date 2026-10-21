@@ -220,7 +220,8 @@ const CAVES = [
 	{ cave: 'the Grizzled Den (Frosthowl)', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 280426, mouth: { map: 1426, x: 42.57, y: 54.68 } },
 	// Frostmane Hold's mouth as marked in game (thmastin); its Headhunters guard the way in.
 	{ cave: 'Frostmane Hold', guide: DUN_MOROGH, target: (g) => g.t === 'kill' && g.quest === 287, mouth: { map: 1426, x: 25.1, y: 50.94 } },
-	{ cave: 'the Jasperlode Mine', guide: ELWYNN, target: (g) => g.t === 'complete' && g.quest === 76, mouth: { map: 1429, x: 61.6, y: 54.1 } },
+	// The Mining Tools lie along the tunnel from the entrance: the first goal inside (#612).
+	{ cave: 'the Jasperlode Mine', guide: ELWYNN, target: (g) => g.t === 'collect' && g.item === 247816, mouth: { map: 1429, x: 61.6, y: 54.1 } },
 	// Pynte (#328): both mouths where the walk in reaches the cave's floor on the navigation grid, not a Classic comment's point beside it.
 	{ cave: 'Shadowthread Cave', guide: TELDRASSIL, target: (g) => g.t === 'collect' && g.item === 5167, mouth: { map: 1438, x: 56.69, y: 31.29 } },
 	{ cave: 'Fel Rock', guide: TELDRASSIL, target: (g) => g.t === 'collect' && g.item === 5221, mouth: { map: 1438, x: 54.59, y: 52.12 } },
@@ -268,6 +269,19 @@ test(`${TELDRASSIL}: Dolanaar Delivery is taken from Porthannius after the Shado
 	assert.ok(yards(porthannius, keldamyr) < yards(tenaron, keldamyr), 'Porthannius is on the way down to Dolanaar');
 	const next = list.slice(take + 1).filter(located).find(everyone);
 	assert.ok(yards(next.goal, keldamyr) < yards(next.goal, tenaron), `the next stop (${next.goal.t} ${next.goal.quest}) is in Dolanaar`);
+});
+
+test(`${TELDRASSIL}: Pynte's report (#647): Teldrassil is taken from the Oracle Tree Bark on The Oracle Tree's turn-in and handed to Fandral with Crown of the Earth`, { skip }, () => {
+	const list = goals(TELDRASSIL);
+	const bark = at(list, 'turnin 98398 (The Oracle Tree)', is('turnin', 98398));
+	const take = at(list, 'accept 940 (Teldrassil)', is('accept', 940));
+	assert.equal(take, bark + 1, 'taken straight after The Oracle Tree is handed in');
+	assert.ok(everyone(list[take]), 'for every class');
+	assert.ok(yards(list[take].goal, list[bark].goal) < 5, 'at the same Oracle Tree Bark, not back at Arynia');
+	const fandral = at(list, 'turnin 935 (Crown of the Earth)', is('turnin', 935));
+	const hand = at(list, 'turnin 940 (Teldrassil)', is('turnin', 940));
+	assert.equal(list[hand].step, list[fandral].step, 'handed in on the Darnassus visit that already goes to Fandral');
+	assert.ok(yards(list[hand].goal, list[fandral].goal) < 5, 'to Fandral himself');
 });
 
 test(`${DUN_MOROGH}: Supplies to Tannok is taken from Hands Springsprocket at the tunnel, leaving Coldridge Valley`, { skip }, () => {
@@ -2339,6 +2353,22 @@ test(`${ASHENVALE}: Ioney's report (#614): Sida's Bag is searched for at Ironbea
 	assert.ok(arrow.length && arrow.every(tomb), `the arrow picks only the tomb: ${JSON.stringify(goal.spots)}`);
 });
 
+// Ioney (#617): "guide wants me to grind till level 28, i just reached level
+// 27". The grind to 28 for Pilot Longbeard's quest (1179, from level 28) came
+// at the Dragonmaw camp before the hearth to Menethil, so the hand-ins there
+// (about 7,200 XP) never counted towards it. It now comes after them, at the
+// same camp on the walk east to Dun Algaz.
+
+test(`${ASHENVALE}: Ioney's report (#617): the grind to 28 comes after the Menethil hand-ins, before Pilot Longbeard`, { skip }, () => {
+	const list = goals(ASHENVALE);
+	const grind = at(list, 'level 28', (g) => g.t === 'level' && g.level === 28);
+	for (const quest of [306, 484, 470, 98282]) {
+		assert.ok(at(list, `turnin ${quest}`, is('turnin', quest)) < grind, `the Menethil hand-in ${quest} counts towards 28`);
+	}
+	assert.ok(at(list, 'hearth to Menethil', (g) => g.t === 'hearth' && g.location === 'Deepwater Tavern') < grind, 'the grind is after the hearth');
+	assert.ok(grind < at(list, 'accept 1179', is('accept', 1179)), 'level 28 before Pilot Longbeard');
+});
+
 // Pynte (#327): "Timberling Seeds quest points me to the north of Teldrassil
 // instead of just around the quest giver." XrayAlpha's diagnosis: QuestieDB's
 // server drop table gives the Elder Timberling (level 10) 100% for the seed and
@@ -2469,6 +2499,25 @@ emit(out)`,
 	assert.equal(horde.length, 0, 'Horde get none');
 });
 
+// Syrael (#575): "Collect the ghost plasma is in the wrong spot, it shows the
+// same spot as for the collect the kodo bone quest above it." The Horde guide
+// had a bare `complete 6134` in the Kodo Graveyard step, so it had no place
+// and the step showed the bones' point; the Magrami Spectres the Crate of
+// Ghost Magnets draws are in the Valley of Bones, where the report finished
+// the quest (63.77,91.60). The ghosts now come on the Mannoroc Coven trip,
+// and Hornizz is handed the plasm afterwards.
+
+test('forever/horde/30-40/04-dustwallow-marsh.guide: Syrael\'s report (#575): the ghost-o-plasm points at the Valley of Bones, after the Kodo Graveyard', { skip }, () => {
+	const list = goals('forever/horde/30-40/04-dustwallow-marsh.guide');
+	const plasm = at(list, 'collect 15849 (Ghost-o-plasm)', (g) => g.t === 'collect' && g.quest === 6134 && g.item === 15849);
+	const { goal } = list[plasm];
+	const finished = { map: 1443, x: 63.77, y: 91.6 };
+	assert.equal(goal.map, 1443, 'the goal is on Desolace');
+	assert.ok(yards(goal, finished) <= 200, `the arrow at ${goal.x},${goal.y} is in the Valley of Bones, not ${Math.round(yards(goal, finished))} yd off`);
+	assert.ok(at(list, 'collect 13703 (Kodo Bone)', (g) => g.t === 'collect' && g.quest === 5501) < plasm, 'the kodo bones come first');
+	assert.ok(plasm < at(list, 'turnin 6134', is('turnin', 6134)), 'the plasm is collected before Hornizz is handed it');
+});
+
 test("forever/professions: Schpune's report (#620): Skinning, Mining and Herbalism are learned at level 1, from the Junior trainers in the starting zones too", { skip: skip || needs('professions.json') }, () => {
 	// Junior trainers in Northshire Valley and The Den, by profession guide.
 	const juniors = { skinning: [247227, 267327], mining: [247226, 267328], herbalism: [247223, 267329] };
@@ -2500,4 +2549,25 @@ test(`${ELWYNN}: Nittepitte's report (#613): Marshal Dughan's turn-ins come betw
 	assert.ok(at(list, 'turnin 99131', is('turnin', 99131)) < kelp, 'Baited for Success is handed to Jason on the way in');
 	assert.ok(kelp < dughan && dughan < escape, 'Collecting Kelp, then Dughan, then The Escape');
 	assert.equal(list[kelp].s, list[escape].s, 'all in the same Goldshire step');
+});
+
+// Nittepitte (#612): "it should tell you to pick up Mining Tools while
+// discovering the Jasperlode Mine." The step led to the mine's far end first,
+// then out to the Kobold Geomancers, and only then back in for the Mining
+// Tools, which lie along the tunnel from the entrance. The tools now come
+// first, on the walk in; the geomancers on the way out.
+
+test(`${ELWYNN}: Nittepitte's report (#612): the Mining Tools are picked up on the walk into the Jasperlode Mine, before its far end`, { skip }, () => {
+	const list = goals(ELWYNN);
+	const tools = at(list, 'collect 247816', (g) => g.t === 'collect' && g.item === 247816 && g.quest === 91732);
+	const explore = at(list, 'complete 76', is('complete', 76));
+	const geomancers = at(list, 'kill 476', is('kill', 91723));
+	assert.equal(list[tools].s, list[explore].s, 'one step in the mine');
+	assert.ok(tools < explore && explore < geomancers, 'the tools, then the far end, then the geomancers');
+	const entrance = list.slice(0, tools).reverse().find(({ goal }) => goal.t === 'goto');
+	assert.ok(entrance, 'the step before is the walk to the entrance');
+	const spots = list[tools].goal.spots || [list[tools].goal];
+	for (const s of spots) {
+		assert.ok(yards(entrance.goal, { map: list[tools].goal.map, ...s }) < yards(entrance.goal, list[explore].goal), `the tools at ${s.x},${s.y} lie between the entrance and the far end`);
+	}
 });

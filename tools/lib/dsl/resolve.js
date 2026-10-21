@@ -1201,14 +1201,15 @@ function resolveGoal(g, zoneMap, prev, data, err, warn, ctx = { sides: ['Allianc
 	switch (v) {
 		case 'accept':
 		case 'turnin':
-		case 'complete': {
+		case 'complete':
+		case 'abandon': {
 			const q = data.quest(g.quest);
 			goal.quest = g.quest;
 			const title = g.title || (q && q.title ? String(q.title) : null);
 			if (!title) err(ln, `quest ${g.quest} is not in data; give its title: \`${v} ${g.quest} "Title"\``, FIND_ID_HINT);
 			else if (!q) warn(ln, `quest ${g.quest} is not in data; using the explicit title (new Forever content?)`);
 			goal.title = title || undefined;
-			if (v === 'complete') break;
+			if (v === 'complete' || v === 'abandon') break;
 			const ends = v === 'accept' ? q && q.start : q && q.end;
 			if (g.npc !== undefined) {
 				candidates = [{ kind: 'npc', id: g.npc }];
@@ -1389,6 +1390,11 @@ function resolveGoal(g, zoneMap, prev, data, err, warn, ctx = { sides: ['Allianc
 			goal.item = g.item;
 			goal.itemName = requireName('item', g.item, g.itemName, 'Item name') || undefined;
 			questFields = true;
+			break;
+		}
+		case 'destroy': {
+			goal.item = g.item;
+			goal.itemName = requireName('item', g.item, g.itemName, 'Item name') || undefined;
 			break;
 		}
 		case 'talk': {

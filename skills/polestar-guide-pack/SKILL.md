@@ -30,11 +30,11 @@ Read it before writing a guide.
   for `goto` and `explore`, or for a place the data does not know.
 - **Routes a player can do alone.** A leveling guide never requires an elite,
   a dungeon or a group quest: lint stops required elite work. Group content
-  goes in as an `optional` goal with the tip `<Name> is elite: grouping up is
-  advised.` To let the player choose a group quest or a dungeon, put its
-  steps under `when group <quest>` or `when dungeon "<Name>"` and the solo
-  way under `when !group` / `when !dungeon` (Polestar 0.3.0); elite goals
-  there stay `optional` all the same.
+  goes in behind `when group <quest>` on its accept step (the player chooses
+  it) or as an `optional` goal, with the tip `<Name> is elite: grouping up is
+  advised.` A dungeon run goes under `when dungeon "<Name>"` and the solo
+  way under `when !dungeon` (Polestar 0.3.0); its elite goals stay
+  `optional`.
 - **The author's own material only.** Write from the author's notes, routes
   they played (`polestar record`) or guides they wrote. Never copy text, step
   lists or routes from guides you did not write, Polestar's own guides

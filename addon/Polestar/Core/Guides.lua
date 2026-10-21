@@ -139,6 +139,8 @@ local REQUIRED = {
 	accept = { quest = isNum, title = isStr },
 	turnin = { quest = isNum, title = isStr },
 	complete = { quest = isNum, title = isStr },
+	abandon = { quest = isNum, title = isStr },
+	destroy = { item = isNum, itemName = isStr },
 	kill = { target = isStr },
 	collect = { item = isNum, itemName = isStr },
 	["goto"] = { map = isNum, x = isNum, y = isNum },

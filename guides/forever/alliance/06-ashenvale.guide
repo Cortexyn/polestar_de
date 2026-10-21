@@ -67,6 +67,10 @@ next forever/alliance/07-thousand-needles
 #   is taken in Auberdine before the boat and handed to Tarrel Rockweaver
 #   before In Search of the Excavation Team (305). A player carrying it gets
 #   no 305 from him until it is handed in (#524).
+# - The grind to 28 for Pilot Longbeard's The Brassbolts Brothers (1179, from
+#   level 28) is done at the Dragonmaw camp on the walk east from Menethil to
+#   Dun Algaz, after the Menethil hand-ins (about 7,200 XP) count towards it,
+#   not before the hearth (#617).
 #
 # Class quests: on arrival in Auberdine, Night Elf Druids finish Trial of the
 # Sea Lion and Aquatic Form (272, 5061: Moonglade, then Darnassus) and Night
@@ -425,11 +429,6 @@ step Dun Modr
 step Rethiel the Greenwarden
   turnin 275
 
-step Dragonmaw camp
-  tip The Dragonmaw camp lies south of the road, just west of the Green Belt: Raiders, Swamprunners and Bonewarders. Pilot Longbeard's quest in Dun Morogh needs level 28.
-  goto 45.7,44.8 "Dragonmaw camp"
-  level 28 -- grind on Dragonmaw Raiders and Swamprunners at the Dragonmaw camp, Wetlands
-
 step Hearth to Menethil
   hearth "Deepwater Tavern"
   turnin 306                              -- Tarrel Rockweaver
@@ -439,6 +438,11 @@ step Hearth to Menethil
   turnin 470                              -- Sida
   turnin 98282                            -- Caitlin Grassman
   vendor nearest
+
+step Dragonmaw camp
+  tip The Dragonmaw camp lies south of the road, just west of the Green Belt: Raiders, Swamprunners and Bonewarders. Pilot Longbeard's quest in Dun Morogh needs level 28.
+  goto 45.7,44.8 "Dragonmaw camp"
+  level 28 -- grind on Dragonmaw Raiders and Swamprunners at the Dragonmaw camp, Wetlands
 
 # ---------------------------------------------------------------- Ironforge
 

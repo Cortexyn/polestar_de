@@ -37,6 +37,8 @@ ns.RegisterDefaults("behavior", {
 	closeSkipped = true, -- close the quest window the game opens after an auto accept/turn-in when it shows only quests the guide skips (Automation.lua)
 	routeChoice = "ask", -- "ask" | "recommended": what happens where a guide offers several next zones
 	trainReminder = "2", -- "2" | "1" | "off": remind to visit the class trainer every 2 levels, every level, never
+	offerClassQuests = true, -- offer a Class guide in a tab when it opens for the character (QoL/ClassQuests.lua)
+	groupQuests = "ask", -- "ask" | "do" | "skip": the answer at a group quest (`when group`) the player has not answered (Own.groupAnswer)
 	suggestFrom = "guides", -- pack id the suggestions come from (Guides.SuggestSource); ours fill in
 })
 
@@ -260,18 +262,18 @@ local function greyNeed(goal)
 	return chainNeeds(guide, level)[q] or false
 end
 
--- Per guide: each goal's step index, and each quest's accept and turn-in
--- goals ({ s, key = "s:g", step, goal }).
+-- Per guide: each goal's step index, and each quest's accept, turn-in and
+-- abandon goals ({ s, key = "s:g", step, goal }).
 local NONE = {}
 local layoutCache = setmetatable({}, { __mode = "k" })
 local function layoutOf(g)
 	local l = layoutCache[g]
 	if l then return l end
-	l = { stepOf = {}, accepts = {}, turnins = {} }
+	l = { stepOf = {}, accepts = {}, turnins = {}, abandons = {} }
 	for s, step in ipairs(g.steps) do
 		for gi, goal in ipairs(step.goals) do
 			l.stepOf[goal] = s
-			local by = goal.quest and (goal.t == "accept" and l.accepts or goal.t == "turnin" and l.turnins)
+			local by = goal.quest and (goal.t == "accept" and l.accepts or goal.t == "turnin" and l.turnins or goal.t == "abandon" and l.abandons)
 			if by then
 				local list = by[goal.quest]
 				if not list then
@@ -546,11 +548,16 @@ function Own.onCooldown(p)
 end
 
 -- `when group <quest>`: the player's answer to "do this group quest?",
--- per character (CharState().groupQuests[q]: "do" or "skip"; Engine.AnswerGroup).
--- Never guessed from the quest log: a solo alternative (`when !group`) may be
--- for a quest the player already has.
+-- per character (CharState().groupQuests[q]: "do" or "skip"; Engine.AnswerGroup),
+-- else the answer for every group quest (behavior.groupQuests "do" or "skip";
+-- "ask": none, so the route asks). Never guessed from the quest log: a solo
+-- alternative (`when !group`) may be for a quest the player already has.
 function Own.groupAnswer(q)
-	return ns.CharState().groupQuests[q]
+	local answer = ns.CharState().groupQuests[q]
+	if answer ~= nil then return answer end
+	local all = ns.Get("behavior.groupQuests")
+	if all == "do" or all == "skip" then return all end
+	return nil
 end
 
 -- The quest of the first unanswered `group` predicate of a step, or nil. Such
@@ -1349,7 +1356,7 @@ local function latchable(goal)
 	local t = goal.t
 	return t == "goto" or t == "explore" or t == "sethome" or t == "hearth" or t == "fly" or t == "getfp" or t == "enter"
 		or t == "buy" or (t == "collect" and (not goal.quest or Own.bagCollect(goal))) or (t == "craft" and craftMode(goal) == "count")
-		or (t == "train" and goal.class == true) or t == "money"
+		or (t == "train" and goal.class == true) or t == "money" or t == "destroy"
 end
 
 -- Check-offs and latched results share CharState().manual[guideId]["s:g"].
@@ -1595,6 +1602,25 @@ function Own.starterTaken(s, g, goal)
 	return false
 end
 
+-- Whether the guide abandoned quest q after step s (an `abandon` goal latched,
+-- or the live route is at or past one and the quest is out of the log; a step
+-- the player only looks at does not count). An accept at step s then stays
+-- done, so the route does not go back to the giver; a player's own abandon
+-- still reopens it, and an accept after the abandon (taking it again) is not
+-- done by it.
+function Own.abandonedByGuide(q, s)
+	local list = layoutOf(guide).abandons[q]
+	if not list then return false end
+	local m = ns.CharState().manual[guide.id]
+	for _, a in ipairs(list) do
+		if a.s >= s then
+			if m and m[a.key] == true then return true end
+			if computed and a.s <= computed and not Compat().IsOnQuest(q) then return true end
+		end
+	end
+	return false
+end
+
 -- done, cur, max[, label, kind] for goal g of step s. Notes are never done
 -- (and never block). A stored check-off (the player's tick, or a result the
 -- Engine latched) is done whatever the live state says, as is a goal the
@@ -1606,7 +1632,7 @@ goalDone = function(s, g, goal)
 	local now = Own.passedNow[guide.id]
 	if now and now[Own.key(s, g)] then return true end
 	if t == "accept" then
-		return C.IsOnQuest(goal.quest) or questDone(goal.quest)
+		return C.IsOnQuest(goal.quest) or questDone(goal.quest) or Own.abandonedByGuide(goal.quest, s)
 	elseif t == "turnin" then
 		-- `direct`: only its latched QUEST_TURNED_IN (checked above) or the
 		-- completed flag. The session's turn-ins would close every later goal
@@ -1667,6 +1693,10 @@ goalDone = function(s, g, goal)
 	elseif t == "task" then
 		-- Done only by the player's tick (checked above).
 		return false
+	elseif t == "abandon" then
+		return not C.IsOnQuest(goal.quest)
+	elseif t == "destroy" then
+		return (C.GetItemCount(goal.item) or 0) == 0
 	elseif t == "money" then
 		return C.GetMoney() >= (goal.money or 0)
 	elseif t == "sethome" then
@@ -1770,11 +1800,13 @@ function Own.labelDone(label)
 	return ok
 end
 
--- Bag-count goals (non-quest buy/collect, count-mode craft), latched within
--- their own step so using the items up does not reopen it.
+-- Bag-count goals (non-quest buy/collect, count-mode craft, money, abandon,
+-- destroy), latched within their own step so using the items up does not
+-- reopen it.
 local function isBagCount(goal)
 	return goal.t == "buy" or (goal.t == "collect" and (not goal.quest or Own.bagCollect(goal)))
 		or (goal.t == "craft" and craftMode(goal) == "count") or goal.t == "money"
+		or goal.t == "abandon" or goal.t == "destroy"
 end
 
 -- Quest goals checked live from the quest log.
@@ -2175,7 +2207,9 @@ local function latchInStep(s, live)
 	if not stepApplies(step) then return end
 	for g, goal in ipairs(step.goals) do
 		local t = goal.t
-		if (isBagCount(goal) or (live and (t == "fly" or t == "hearth" or t == "enter"))) and goalApplies(goal) and not checked(s, g) and goalDone(s, g, goal) then
+		-- An abandon latches on the live step only: on a step looked at ahead it
+		-- reads done for a quest not taken yet (Own.abandonedByGuide).
+		if ((isBagCount(goal) and (live or t ~= "abandon")) or (live and (t == "fly" or t == "hearth" or t == "enter"))) and goalApplies(goal) and not checked(s, g) and goalDone(s, g, goal) then
 			manualFor(guide.id, true)[s .. ":" .. g] = true
 		end
 	end
@@ -2383,6 +2417,10 @@ local function describe(goal)
 		return L["Turn in"], questTitle(goal), "quest", fmt(L["at %s"], N.Npc(goal.npc) or goal.npcName or N.Object(goal.object) or goal.objName)
 	elseif t == "complete" then
 		return L["Complete"], questTitle(goal), "quest", nil
+	elseif t == "abandon" then
+		return L["Abandon"], questTitle(goal), "quest", nil
+	elseif t == "destroy" then
+		return L["Destroy"], N.Item(goal.item) or goal.itemName, "item", nil
 	elseif t == "kill" then
 		-- `tame`: kill credit for taming the beast (a Lookup guide's Taming the Beast).
 		return goal.tame and L["Tame"] or L["Kill"], N.Npc(goal.npc) or goal.target, "npc", goal.quest and fmt(L["for %s"], questTitle(goal)) or nil
@@ -4268,7 +4306,8 @@ function Engine.GroupQuests()
 end
 
 -- The player's answer for group quest q: "do", "skip", or nil to ask again.
--- Per character, for every guide (CharState().groupQuests).
+-- Per character, for every guide (CharState().groupQuests); a quest not
+-- answered takes behavior.groupQuests ("do", "skip"; "ask": nil).
 function Engine.GroupAnswer(q) return Own.groupAnswer(q) end
 
 function Engine.AnswerGroup(q, answer)
@@ -4764,6 +4803,11 @@ ns.On("QOL_HEARTH_CHANGED", onUpdateEvent)
 
 -- New gear verdicts (equipment, spec, level, item data): `when upgrade`.
 ns.On("GEAR_UPDATED", onUpdateEvent)
+
+-- A new answer for every group quest (`when group`, Own.groupAnswer).
+ns.On("SETTING_CHANGED", function(path)
+	if path == "behavior.groupQuests" then requestUpdate() end
+end)
 
 -- An item or spell going on cooldown: `when cooldown` (Own.onCooldown), once a
 -- guide has asked, since SPELL_UPDATE_COOLDOWN comes with every cast.

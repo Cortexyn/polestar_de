@@ -54,6 +54,8 @@ const MODS = {
 	// `direct`: handed in straight from the NPC's window, with no accept.
 	turnin: [...COMMON, ...COORDS, 'npc', 'object', 'reward', 'choose', 'xp', 'money', 'direct'],
 	complete: [...COMMON, ...COORDS],
+	abandon: ['text', 'optional', 'only'],
+	destroy: ['text', 'optional', 'only'],
 	kill: [...COMMON, ...COORDS, 'npc', 'quest', 'count'],
 	collect: [...COMMON, ...COORDS, 'npc', 'quest', 'count', 'nearest'],
 	goto: [...COMMON, 'map', 'r', 'frame'],
@@ -593,7 +595,8 @@ function parsePositional(verb, goal, toks, line, lex, ln, err, spans) {
 	switch (verb) {
 		case 'accept':
 		case 'turnin':
-		case 'complete': {
+		case 'complete':
+		case 'abandon': {
 			if (!t) return err(ln, `\`${verb}\` needs a quest id`), -1;
 			goal.quest = parseId(t, 'quest', ln, err);
 			if (goal.quest === null) return -1;
@@ -615,6 +618,7 @@ function parsePositional(verb, goal, toks, line, lex, ln, err, spans) {
 		}
 		case 'collect':
 		case 'use':
+		case 'destroy':
 		case 'buy': {
 			if (!t) return err(ln, `\`${verb}\` needs an item id`), -1;
 			goal.item = parseId(t, 'item', ln, err);

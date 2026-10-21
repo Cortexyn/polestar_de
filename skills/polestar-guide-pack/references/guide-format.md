@@ -69,6 +69,8 @@ otherwise, the place modifiers `@x,y`, `map`, `r`, `era` / `live`.
 | `accept <quest> ["Title"]` | Take a quest; giver, title and place from the data | `npc`, `object`, `item`, `lvl` |
 | `turnin <quest> ["Title"]` | Hand a quest in | `npc`, `object`, `choose`, `reward`, `xp`, `money`, `direct` |
 | `complete <quest> ["Title"]` | Finish every objective of a quest with nothing more specific to track | |
+| `abandon <quest> ["Title"]` | Drop a quest from the log; done once it is out, the quest's `accept` stays done (Polestar 0.3.0) | no place modifiers, no `group` |
+| `destroy <item> ["Name"]` | Delete an item from the bags; done once the bags hold none (Polestar 0.3.0) | no place modifiers, no `group` |
 | `kill <npc>` / `kill "<Name>"` | Kill a mob; with `quest Q.O` the quest log counts it, without it the player ticks it | `npc`, `quest`, `xN` |
 | `collect <item> ["Name"]` | Loot or gather items; without `quest`, counted in the bags | `npc`, `quest`, `xN`, `nearest` |
 | `goto <x>,<y> ["Label"]` | Walk there; for travel and places the data has no target for | `map`, `r`, `era` / `live` only |
@@ -152,7 +154,7 @@ unanswered, the route waits and asks; on the accept step, `!group` for a solo
 way; not on `next` or `skipto`); `!` in front of any but
 `level` and `money` turns it around. Once the route has passed the step, the
 outcome stays. A pack with `when` (on a step or a `next` line), `along` or
-`label` needs Polestar 0.2.6; with `money`, `task`, `enter` or `cast` goals, a `when money`,
+`label` needs Polestar 0.2.6; with `money`, `task`, `enter`, `cast`, `abandon` or `destroy` goals, a `when money`,
 `when dungeon`, `when upgrade`, `when done`, `when skill`, `when cooldown` or
 `when group` predicate, or `skipto`, needs Polestar 0.3.0.
 

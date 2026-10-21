@@ -130,12 +130,14 @@ A step must contain at least one goal.
 | `accept` | `<questId> ["Title"]` | Title and quest giver from data; a quoted title overrides it (required if the quest is not in data). |
 | `turnin` | `<questId> ["Title"]` | Turn-in NPC/object from data. |
 | `complete` | `<questId> ["Title"]` | Finish all objectives. |
+| `abandon` | `<questId> ["Title"]` | Drop a quest from the log (a quest the guide takes only to turn it in elsewhere, a chain you skip). Done once the quest is out of the log, and it stays done for the rest of its step. The quest's `accept` stays done too, so abandoning on the guide's say-so does not send the route back to the giver. Like other quest goals it does not apply to a quest the guide never accepts. Lint counts it as the end of the quest, like a turn-in. Pack format 5. |
 | `kill` | `<npcId>` or `"Target name"` | Pair with `quest Q.O` to track a quest objective. |
 | `collect` | `<itemId> ["Item name"]` | Pair with `quest Q.O` when the item is one of the quest's objectives; otherwise tracked by bag count `xN` (an item the quest only uses). `npc <id>` names the NPC who hands the item over, for an item nothing drops and no data lists a source for (a quest report given in a gossip window): the target button then has someone to target, and the point is that NPC's spawn unless you place it. `collect <item> xN nearest` (no `quest`) compiles to farm spots: clusters of normal or rare mobs that drop the item at 2% or more, outside towns and guard posts, each with the zone's safety (`A`/`H` faction zone, `AH` contested), mob level range, items per kill and spawn count; at most 16 per continent, spread over safety and 10-level bands. The engine picks one by the player's level, faction and travel time. |
 | `goto` | `<x>,<y> ["Label"]` | Coordinates are mandatory here. A label that is a subzone's name as the game spells it (`"Fargodeep Mine"`, not `"Fargodeep Mine's mouth"`) gets its area ("Places by ID"); at a cave's or mine's mouth the goto then also counts as arrived once the player walks into it past the point (in that subzone and indoors). |
 | `talk` | `<npcId>` | |
 | `interact` | `<objectId>` | Click a game object. |
 | `use` | `<itemId> ["Item name"]` | |
+| `destroy` | `<itemId> ["Item name"]` | Delete an item from the bags (a start-zone Hearthstone to free a slot, a quest item that is no use any more). Done once the bags hold none of it, and it stays done for the rest of its step; a character that never held it has it done at once. The guide window reads "Destroy Hearthstone". Pack format 5. |
 | `sethome` | `"Location"` or `nearest` | Inn location as the game names it (the bind location it reports), e.g. `"Goldshire"`. Without `npc` the compiler names the inn's innkeeper, so the arrow leads to them ("What the compiler fills in"); `npc <id>` picks one yourself. `sethome nearest` binds at the nearest own-faction inn when the step comes up. Lint warns about a location no inn has (`polestar find --kind inn`). Completes on every client language: binding at the inn's innkeeper, or a bind location the client names as the inn's area (see "Places by ID"). A player with "Set your home at the guide's inn" on (Quality of Life, Travel; off by default) has Polestar bind and confirm when they talk to that innkeeper (for `nearest`, any innkeeper the compiler listed for it), never at another inn. |
 | `hearth` | `"Location"` | Done when the zone or subzone where you land has that name: an inn's location or the zone it is in, in the client's language when the compiler finds its area ("Places by ID"). Lint warns about any other name. While the Hearthstone is on cooldown (or not in the bags), the goal says how long until it is ready and the arrow leads to that inn on foot, so a "Hearthstone on cooldown?" note is not needed. |
 | `getfp` | `"Location"` | Discover a flight path: the flight point's name (`"Stormwind, Elwynn"`) or its part before the comma (`"Stormwind"`). The compiler adds its taxi node, so it completes on every client language ("Places by ID"), and without `npc` that node's flight master, so the arrow leads to them ("What the compiler fills in"); `npc <id>` picks one yourself. Lint warns about a name no flight point has (`polestar find --kind flight`). |
@@ -354,7 +356,9 @@ guide window asks: "Skip it" (the default, the solo route) or "Do it with a
 group". Quest automation leaves the quest alone until then. The answer is
 kept per character, once per quest, for every guide; Options, Discovery,
 Group quests lists them and changes an answer until the route has passed
-the step. "Do it" makes `when group` hold and `when !group` fail; "Skip it"
+the step. Options, Guide, Automation, "Group quests" answers every quest the
+player has not answered one by one: ask at each (the default), do them all,
+or skip them all; then the route never waits. "Do it" makes `when group` hold and `when !group` fail; "Skip it"
 the other way round.
 
 Put `when group` on the quest's accept step: when it fails, the quest's
@@ -414,7 +418,7 @@ goal inside a level (`level 12.5`), is written in pack format 4, which
 Polestar 0.2.6 and later read. A `when money`, `when dungeon`, `when
 upgrade`, `when done`, `when skill`, `when cooldown` or `when group`
 predicate (above) writes format 5 (Polestar 0.3.0 and later), because 0.2.6 knows `when` but
-not those predicates; `money`, `task`, `enter` and `cast` goals also need format 5
+not those predicates; `money`, `task`, `enter`, `cast`, `abandon` and `destroy` goals also need format 5
 (docs/PACK_FORMAT.md).
 
 ## Along the way
@@ -1061,7 +1065,7 @@ Locations are written as the game names them; `polestar find --kind inn` and
 with coordinates). `sethome nearest` binds at the nearest inn of the
 player's faction instead.
 
-### Errands: `train`, `buy`, `vendor`, `level`, `money`, `task`, `note`
+### Errands: `train`, `buy`, `vendor`, `level`, `money`, `task`, `abandon`, `destroy`, `note`
 
 ```
   vendor nearest
@@ -1070,12 +1074,14 @@ player's faction instead.
   level 9
   money 1s                            -- loot until you can afford the next spell
   task "Tame a Venomtail Scorpid" only Hunter
+  abandon 783                          -- off the log, the accept stays done
+  destroy 6948 "Hearthstone"           -- frees a bag slot
   note You can train First Aid with any trainer of it in a city.
 ```
 
 `nearest` and `train class` pick the trainer or vendor at runtime, by the
 player's faction and where they stand. A `task` is for what Polestar cannot
-see: the player ticks it; a `note` never holds the step at all.
+see: the player ticks it; `abandon` and `destroy` check themselves against the quest log and the bags; a `note` never holds the step at all.
 
 ### Professions: `train`, `learn`, `craft`, `skill`
 

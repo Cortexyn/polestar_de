@@ -25,7 +25,8 @@
 --       "custom": an imported Pawn scale (Pawn.lua); key is "custom:<id>", label
 --       "Custom: <name>", and its weights are used as they are, at every level
 --   Gear.GetWeights() -> weights (read-only): the spec's band for this level
---       (Gear.WEIGHT_BANDS, generated SpecData.lua), else the authored table
+--       (Gear.WEIGHT_BANDS, generated SpecData.lua), else the authored table;
+--       a small melee weapon DPS weight is added where the spec has none
 --   Gear.GetWeightsInfo() -> { source, note, upTo, level } of the weights in use
 --   Gear.GetPlayer() -> { class, classID, level, race, raceID, faction } (read-only)
 --   Gear.GetRacial() -> the racial gear traits in use (Gear.RACIALS by raceID) | nil
@@ -401,8 +402,31 @@ function Gear.DetectSpec(class, classID)
 	return meta.default, "default"
 end
 
+-- Melee weapon DPS for the specs whose weights leave it out: every caster, and
+-- Druids. Low-level casters and Druids still fight with the weapon, so a staff
+-- or dagger that hits harder counts. A tiebreaker: the stats that matter
+-- outweigh it; a weight the spec has is never changed. Feral is left out from
+-- the level Bear Form is learned (FERAL_FORM_LEVEL): forms ignore weapon DPS.
+local MELEE_DPS = 0.01
+local FERAL_FORM_LEVEL = 10
+local withMelee = setmetatable({}, { __mode = "k" }) -- weights -> weights with dps
+
+local function withMeleeDps(w, class, key, level)
+	if not w or w.dps ~= nil then return w end
+	if class == "DRUID" and key == "feral" and (level or 0) >= FERAL_FORM_LEVEL then return w end
+	local c = withMelee[w]
+	if not c then
+		c = {}
+		for k, v in pairs(w) do c[k] = v end
+		c.dps = MELEE_DPS
+		withMelee[w] = c
+	end
+	return c
+end
+
 -- The spec's weights at a level: the first band whose upTo covers it (the
--- last band past the end), else the authored table.
+-- last band past the end), else the authored table; with a melee DPS weight
+-- where the spec has none (below).
 -- -> weights, info { source, note, upTo }
 function Gear.WeightsFor(class, key, level)
 	local bands = BANDS[class] and BANDS[class][key]
@@ -414,10 +438,10 @@ function Gear.WeightsFor(class, key, level)
 				break
 			end
 		end
-		return pick.weights, pick
+		return withMeleeDps(pick.weights, class, key, level), pick
 	end
 	local w = WEIGHTS[class] and WEIGHTS[class][key]
-	return w, w and { source = "polestar", upTo = 60 } or nil
+	return withMeleeDps(w, class, key, level), w and { source = "polestar", upTo = 60 } or nil
 end
 
 local function resolveSpec()

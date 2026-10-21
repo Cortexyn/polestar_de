@@ -849,12 +849,13 @@ end
 -- just moved past a quest (while that step's guide and next step are on
 -- screen); the step on screen when it is not the live one (skipped: unskip
 -- it; looked at with ‹ ›: back to the live step); then the out-levelled offer
--- (while its guide is active), then the training reminder. Taking or
+-- (while its guide is active), then the training reminder, the riding one,
+-- then a Class guide that just opened (QoL/ClassQuests.lua). Taking or
 -- dismissing one lets the next through.
 ---------------------------------------------------------------------------
 
 local SKIPPED_SECONDS = 20 -- how long the "Skipped …" notices stay
-local notices = { questSkip = nil, stepSkip = nil, skipped = nil, away = nil, outlevel = nil, train = nil, riding = nil }
+local notices = { questSkip = nil, stepSkip = nil, skipped = nil, away = nil, outlevel = nil, train = nil, riding = nil, classQuest = nil }
 GF.notices = notices
 
 -- The step on screen when it is not the live step: { guideId, index, live,
@@ -894,6 +895,7 @@ local function bannerNotice()
 	if o and g ~= nil and g.id == o.guideId then return "outlevel", o end
 	if notices.train then return "train", notices.train end
 	if notices.riding then return "riding", notices.riding end
+	if notices.classQuest then return "classQuest", notices.classQuest end
 	return nil
 end
 GF.BannerNotice = bannerNotice
@@ -1067,6 +1069,13 @@ function GF.LayoutBanner(width)
 		end
 		banner.Later:Hide()
 		banner.Close:Show()
+	elseif kind == "classQuest" then
+		banner.Icon:SetTexture(Theme.Media("icon-train"))
+		local title = string.format(L["Class quest ready: %s"], n.title or "")
+		banner.Text:SetText(n.why and (title .. "\n" .. n.why) or title)
+		local w = placeLink(banner.Jump, L["Open in a tab"], 0, -4)
+		placeLink(banner.Later, L["Later"], w + 10, -4)
+		banner.Close:Show()
 	end
 	local h = floor(9 + banner.Text:GetStringHeight() + 4 + 18 + 9 + 0.5)
 	banner:SetHeight(h)
@@ -1115,12 +1124,17 @@ function GF.TakeBanner()
 		end
 		local R = ns.QoL and ns.QoL.Riding
 		if R and R.OnResolve then R.OnResolve(n.tier) end
+	elseif kind == "classQuest" then
+		notices.classQuest = nil
+		if E and E.OpenTab then E.OpenTab(n.guideId) end
+		local CQ = ns.QoL and ns.QoL.ClassQuests
+		if CQ and CQ.Resolve then CQ.Resolve(n.guideId) end
 	end
 	GF.Layout()
 end
 
 -- The banner's second action: Do it with a group for a group quest, else
--- Later (dismiss).
+-- Later (dismiss; a Class guide: until a higher level).
 function GF.LaterBanner()
 	local kind, n = bannerNotice()
 	local E = Engine()
@@ -1128,13 +1142,14 @@ function GF.LaterBanner()
 		if E and E.AnswerGroup then E.AnswerGroup(n.quest, "do") end
 		GF.Layout()
 	else
-		GF.DismissBanner()
+		GF.DismissBanner(true)
 	end
 end
 
 -- Dismiss the visible notice (training: until the next due level; a step on
--- screen that is not the live one: until another step is).
-function GF.DismissBanner()
+-- screen that is not the live one: until another step is; a Class guide: for
+-- good, or with `later` (the Later link) until a higher level).
+function GF.DismissBanner(later)
 	local kind, n = bannerNotice()
 	if kind == "trip" then
 		ns.Nav.nearby.EndTrip()
@@ -1144,6 +1159,10 @@ function GF.DismissBanner()
 		local R = ns.QoL and ns.QoL.Riding
 		if R and R.OnResolve then R.OnResolve(n.tier) end
 		notices.riding = nil
+	elseif kind == "classQuest" then
+		notices.classQuest = nil
+		local CQ = ns.QoL and ns.QoL.ClassQuests
+		if CQ and CQ.Resolve then CQ.Resolve(n.guideId, later == true) end
 	elseif kind then
 		notices[kind] = nil
 	end
@@ -3068,6 +3087,14 @@ end)
 ns.On("RIDING_DUE", function(notice)
 	if not F then return end
 	notices.riding = notice
+	if ns.IsLoggedIn() then GF.Layout() end
+end)
+
+-- CLASS_QUEST_READY(notice): a Class guide this character can start now;
+-- offer it in a tab until taken or dismissed.
+ns.On("CLASS_QUEST_READY", function(notice)
+	if not F then return end
+	notices.classQuest = notice
 	if ns.IsLoggedIn() then GF.Layout() end
 end)
 

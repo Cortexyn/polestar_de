@@ -30,9 +30,9 @@ const NUM_TEXT = /^-?\d+(?:\.\d+)?$/;
 const POSITIONAL_ID = {
 	npc: ['kill', 'talk', 'train', 'vendor'],
 	object: ['interact'],
-	item: ['collect', 'use', 'buy'],
+	item: ['collect', 'use', 'destroy', 'buy'],
 };
-const QUEST_POSITIONAL = ['accept', 'turnin', 'complete'];
+const QUEST_POSITIONAL = ['accept', 'turnin', 'complete', 'abandon'];
 const XY_POSITIONAL = ['goto', 'explore'];
 // Verbs whose one positional is their text: written bare when nothing follows.
 const TEXT_POSITIONAL = new Set(['note', 'task']);
@@ -173,6 +173,7 @@ function positionalTokens(verb, f) {
 		case 'accept':
 		case 'turnin':
 		case 'complete':
+		case 'abandon':
 			id('quest');
 			name('title');
 			break;
@@ -182,6 +183,7 @@ function positionalTokens(verb, f) {
 			break;
 		case 'collect':
 		case 'use':
+		case 'destroy':
 		case 'buy':
 			id('item');
 			name('itemName');
@@ -407,6 +409,8 @@ const POSITIONAL = {
 POSITIONAL.turnin = POSITIONAL.accept;
 POSITIONAL.complete = POSITIONAL.accept;
 POSITIONAL.use = POSITIONAL.collect;
+POSITIONAL.destroy = POSITIONAL.collect;
+POSITIONAL.abandon = POSITIONAL.accept;
 POSITIONAL.buy = POSITIONAL.collect;
 POSITIONAL.explore = POSITIONAL.goto;
 POSITIONAL.craft = POSITIONAL.learn;

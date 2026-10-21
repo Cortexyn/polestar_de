@@ -1445,6 +1445,7 @@ local function sectionLayout(s)
 	win.Close:ClearAllPoints()
 	win.Close:SetPoint("TOPRIGHT", on and win.Header or details.Art, "TOPRIGHT", -12, -12)
 	if not on then win.Close:SetFrameLevel(details.Scrim:GetFrameLevel() + 2) end
+	if win.PlaceThanks then win.PlaceThanks() end
 	W.SetSearchPlaceholder(win.Search, (s and s.searchPlaceholder) or (s and s.search and L["Search"]) or HUB_SEARCH)
 	win.Search:SetShown(not s or s.search ~= nil)
 end
@@ -1795,6 +1796,7 @@ local function build()
 	})
 	P.frame = win
 	UI.Report.SidebarLink(win)
+	UI.Thanks.HeaderLink(win)
 	P.search = win.Search
 	P.scroll = win.Scroll
 	local main = win.Main
@@ -1858,7 +1860,7 @@ local function build()
 			initial = function(rows)
 				local first
 				for i, w in ipairs(rows) do
-					if ns.Gamepad.Within(w, win.Main) and w.psKey == nil then
+					if ns.Gamepad.Within(w, win.Main) and w.psKey == nil and w ~= win.ThanksLink then
 						if w.psGuide and w.psGuide.id == P.Selected() then return i end
 						first = first or i
 					end

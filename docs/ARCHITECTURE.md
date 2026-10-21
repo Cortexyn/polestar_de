@@ -1092,6 +1092,12 @@ Polestar.Engine.GetProgress() -> doneSteps, totalSteps
   `train` goal (an npc in the registry or `train class`). The UI shows a slim
   banner with Show (temporary `Nav.SetTarget`) and Later, cleared by
   `CLASS_TRAINED`; Options → Guide → Automation → "Trainer reminders".
+  With `behavior.offerClassQuests` (default on; QoL/ClassQuests.lua), a
+  Class guide that opens for the character (`GuideMatches`, its gate gone,
+  `Engine.StartGate`, nothing of it under way) fires `CLASS_QUEST_READY`
+  on level-up, a turn-in or login, and the banner offers it in a tab (Later:
+  again at a higher level; dismissed: never; `CharState().flags.classOffered`),
+  one at a time; Options → Guide → Automation → "Offer class quests".
 - **Conditions checked during play.** A step with `when` (format 4;
   GUIDE_FORMAT, "Conditions checked during play") applies only while every
   predicate holds (`Own.whenFails`, `Own.predicateHolds`): the level, quests
@@ -1112,7 +1118,10 @@ Polestar.Engine.GetProgress() -> doneSteps, totalSteps
   has asked), and the player's answer at a group quest (`Own.groupAnswer`:
   `CharState().groupQuests[q]`, "do" or "skip", set by `Engine.AnswerGroup`
   from the guide window's banner or Options, Discovery, Group quests;
-  `Engine.GroupQuests` lists a character's). An unanswered `group` predicate
+  `Engine.GroupQuests` lists a character's; a quest not answered takes
+  `behavior.groupQuests`, "do" or "skip" for all of them, or "ask", none,
+  re-evaluated on `SETTING_CHANGED`; Options, Guide, Automation, "Group
+  quests", shown while `GroupQuests` lists one). An unanswered `group` predicate
   holds and `stepDone` is false while `Own.groupPending` names its quest (not
   on an along step), so the route waits at the step; `Engine.GroupQuestion`
   gives the banner the quest, and `wantsFrom` keeps automation off it. `stepApplies` reads them, so such a step counts as one
@@ -2112,18 +2121,22 @@ or the minimap.
 
 ```lua
 Polestar.Pins.SetLayer(layer, pins, opts)   -- replace a layer; opts = { world = true, minimap = true, edge = false, scale = 1,
-                                            --   minimapAreas = false }
+                                            --   minimapAreas = false, minMapType = nil, worldLayout = nil }
 Polestar.Pins.ClearLayer(layer)
 Polestar.Pins.SetLayerVisible(layer, visible)
 -- pin = { map, x, y, f, icon (Theme.Media name or texture path), size, minimapSize, color = { r, g, b, a },
---         tooltip = string | function(tooltip), onClick = function(button), priority,
+--         tooltip = string | function(tooltip), onClick = function(button, owner), priority,
 --         glow (soft halo), ring = { r, g, b } (ring round the disc), backdrop (scrim disc), area (yards),
 --         hull = { wx1, wy1, ... } (a convex region in world yards on the pin's continent `c`),
 --         areaOnly (only the area or hull draws, no pin) }
 ```
 
 Pins are drawn on the world map for the map being viewed (converted through Compat
-for other maps) and projected on the minimap; `edge = true` clamps that layer's
+for other maps). Optional `worldLayout(projected, view)` receives this layer's
+`{ pin, x, y }` entries in viewed-map percentages and returns its world-map
+layout; map and canvas-size changes run it again. It never changes minimap
+pins. `minMapType` hides world pins on broader views.
+Pins are projected on the minimap; `edge = true` clamps that layer's
 out-of-range pins to the minimap rim. On the world map they are Polestar's own
 frames on the canvas, at the frame levels the map gives its own pins (MapCanvas,
 below): pins at `PIN_FRAME_LEVEL_SUPER_TRACKED_QUEST`, counter-scaled as a map
@@ -2363,24 +2376,38 @@ on is searched first: player to the current walk leg's end, or to the target,
 with `Path.Find` on the player's continent (from the player's height,
 `Compat.GetPlayerUnitPosition`; a ghost with `waterWalking`). Until the answer, and
 whenever there is none, the arrow points straight as before. With a path,
-`Nav.Sample` follows it with padding, so a road's little wiggles do not
-jerk the arrow: the next point is passed
-within 5 yd (the nearest segment among the next 12 decides how far along the
-player is), and from it the arrow aims at the furthest path point up to
-30 yd along the path (`AHEAD`) such that every path point on the way lies
-within 10 yd (`PAD`) of the straight line from the player to it, neither
-behind the player nor beyond it along that line. A real corner (a point
-more than 10 yd off the line) still turns the arrow, gradually from about
-30 yd out and fully at the corner; past the next point it aims at the
-middle of that point and the one before, so a zigzag of points either side
-of the road cancels out. It never aims past a point more than 6 yd
-(`FLOOR_STEP`) above or below the next one (another floor), past the path's
-end (the leg's goal: crossings, approach chains and guide gotos are legs of
-their own), or, on a piece of a split walk, past the last path point before
-its chokepoint (`Travel.Aim` passes `leg.seg`). The yards it reports are
-still the yards left along the path (to the next point, then along it),
-never to the aim point; `Travel.Aim` returns those yards as a fifth value.
-The arrow eases into each new direction (`Nav/Arrow.lua`'s `DAMPING`).
+`Nav.Sample` follows it with `Nav/Follow.lua`, which knows nothing of where
+the path came from (the walking engine today, a guide leg's polyline later):
+`Follow.Step(xs, ys, zs, left, n, state, px, py, stop)`. The player's place
+on the path is their projection onto it: the nearest point on a segment
+from the current one to 60 yd further along, so a point passed to one side
+counts as passed, and coming at the path at an angle or walking beside a
+road never holds the arrow on a node. The projection only moves forward;
+a later segment that is not the next one takes over only when 4 yd nearer
+(the far side of a hairpin), and it never moves past a blocking point the
+player has not come within 5 yd of: a point more than 6 yd (`FLOOR_STEP`)
+above or below the one before it (stairs, a ramp, a lift's landing), and,
+on a piece of a split walk, every point after the last one before its
+chokepoint (`Travel.Aim` passes `leg.seg` as `stop`). From the projection the
+arrow aims at the furthest point along the path within 35 yd of the player
+(`RADIUS`) and 45 yd along it (`AHEAD`), between points, so it slides along
+the path as the player moves. Every path point on the way lies within
+12 yd (`PAD`) of the line from the projection to it, so a road's wiggles stay
+inside; a real corner stops the aim where the line cuts inside it by 6 yd
+(`CORNER_PAD`), and it comes round as the player does. Where points are 8 yd
+or less apart on both sides, the aim slides along the path smoothed over each
+point's neighbours, so a zigzag either side of the road cancels out. It never
+aims onto another floor, past the path's end (the leg's goal: crossings,
+approach chains and guide gotos are legs of their own) or past `stop`. When
+no path ahead lies within 35 yd (the player has wandered off), it points back
+to the path 10 yd ahead of their place on it. The yards it reports are
+the yards left along the path (straight to the end of the segment the player
+is on, then along it), never to the aim point; `Travel.Aim` returns those
+yards as a fifth value, and `Walk.Progress(c, x, y)` gives the yards along
+the path to the player's place on it and the yards between them. The arrow
+eases into each new direction (`Nav/Arrow.lua`'s `DAMPING`, swinging at most
+`MAX_TURN`, about 200 degrees a second), on the target's bearing on the map:
+turning the camera moves it at once.
 A new goal (more than 1 yd away from the searched one) cancels the search
 in flight and drops the path; more than 25 yd off the path asks again (at
 most every 2 s, the old path kept meanwhile); a failed search (`nodata`,
@@ -3288,8 +3315,57 @@ Polestar.Gear.Bags.Redraw()                  -- repaint the shown bags; GEAR_UPD
 Each feature is a setting on the Map page (Rares & travel, Zones), and none of
 them makes a frame or loads data until it's on. The icon layers (dungeon
 entrances, flight masters `maps.taxiPins`, docks `maps.dockPins`, inns
-`maps.innPins`, and `maps.travelMinimap` for the minimap) default to off. The
+`maps.innPins`, NPC services `maps.servicePins`, and `maps.travelMinimap` for
+the minimap) default to off. The
 flight timer and the instance tracker are set under Quality of Life.
+
+- NPC services (`maps.servicePins`, off; `Maps/Services.lua`): one pin per
+  friendly NPC spawn, with all its services in the tooltip and click-to-navigate.
+  The layer's `minMapType = UIMapType.Zone` hides it on world and continent
+  maps, while keeping zone, city and minimap icons. Vendors use the native
+  Banker tracking bag; bankers use the native treasure chest icon.
+  `Maps/ServiceClusters.lua` groups service points belonging to the same
+  detail map, only while an outdoor region in the existing zone-level catalog
+  is viewed. Map parentage and the native click lookup `GetMapInfoAtPosition`,
+  rather than `IsCityMap`, cover cities and other areas with a detail map,
+  including cities registered as siblings of their region. The catalog keeps
+  detail views individual even when opened directly, without visiting a region.
+  Groups use up to three native icons; totals stay in the tooltip, with no map badge. The area's own map,
+  services outside detail areas and minimap pins stay individual. Clicking a
+  group opens the existing widget menu: category, then NPCs with their original
+  coordinates (ten per page). Choosing an NPC sets a waypoint at its exact
+  spawn; it does not change the viewed map. Native clicks on the city/area
+  still open its detail map. Map/zoom/filter changes close the menu, while
+  unrelated layer updates leave it open. The map's right click passes through.
+  `maps.serviceFilters` selects the 11 categories (class trainers and mailboxes
+  on, the rest opt-in); flight masters and inns are not among them, and an NPC
+  with either role is left to the travel layers (`maps.taxiPins`,
+  `maps.innPins`) so nothing is drawn twice. `maps.serviceMinimap` opts
+  into minimap icons. Both tracking menus have a Polestar service submenu;
+  the same settings live under Map, Rares & travel, NPC services. Class trainers
+  are restricted to the character's class. A repair vendor has one icon, using
+  the first enabled category it offers, and remains a vendor when repair is off.
+  `Maps/ServiceData.lua` reads the bundled Codex role index and mailbox objects,
+  separately from NPC IDs. QuestieDB facts are imported only at build time;
+  no external database addon is needed during play. The data importer keeps
+  mailbox roles and friendly sides from faction templates; faction ID zero
+  means both sides, matching Questie's mailbox lists. Unknown nonzero templates
+  and templates hostile to both sides are omitted. The Codex retains the
+  titles of service NPCs only (no other NPC carries one, to keep the pack
+  small) and every service/mailbox spawn (`pts` and `more`), without
+  clustering or caps. English trainer titles supplement class roles; displayed
+  names remain localized. Repeated mailbox
+  observations within 10 world yards share one icon at an original point;
+  the other physical mailboxes keep their own pins. Codex spawn frame tags
+  are retained for coordinate projection and navigation. Optional escaped
+  `t<title>` NPC and `m<faction>` mailbox tails extend the packed records;
+  older readers skip these comma-free fields, and older packs stay readable.
+  Reads run in batches of 100 outside combat, the first time the world map
+  opens with the layer on (at once when its minimap icons are on), never at
+  login, so the Codex stays unloaded until then; filters reuse the records
+  (slim copies of the friendly ones: id, name, title, side, roles, spawns),
+  and a Codex/name-pack load invalidates them. Missing data
+  produces an explanatory message and is retried when the dependency loads.
 
 - Unexplored areas (`maps.reveal`: `off` | `on` | `tint`, `Maps/Reveal.lua`):
   textures on one frame of Polestar's on each map frame's canvas (the world
@@ -3711,7 +3787,15 @@ Windows, Arrow), **Map** (30), **Questing** (40: Quests, Rewards & gear,
 Talents, Buttons), **Discovery** (50: Lookup, Dungeons, Rares), **Quality of Life** (60:
 Travel, Social, Vendors, Trackers), **Community guides** (70, a custom page:
 `UI/Packs.lua`), **Gamepad** (75, registered by `UI/GamepadGuide.lua`:
-Navigation, Key bindings), Recorder, About. The options window
+Navigation, Key bindings), **Guiding Stars** (80, key `thanks`, a custom page:
+`UI/Thanks.lua`: the top supporter and top contributor on podiums, then both
+lists in full, from `Core/Credits.lua`, generated by `polestar credits` from
+`tools/lib/credits.json` (Ko-fi supporters in rank order, no amounts; the page
+names them only, with no donation link or request, per Blizzard's add-on
+policy rule 5) and the
+merged pull requests on GitHub; `UI.Thanks.HeaderLink` puts "Special thanks
+to: <name>", a name drawn anew at each open, at the top right of the hub's
+and the options' headers, opening the page), Recorder, About. The options window
 declares every tab and section of the module-filled pages, in order, and the
 modules register their controls into them by name (`page = L["Questing"]`,
 `tab = L["Rewards & gear"]`, `section = L["Gear advice"]`): Quests, QoL,
