@@ -232,6 +232,71 @@ test('nearby mailbox observations merge across object IDs while separate physica
   assert.deepEqual(out, [{ id: 1, x: 48 }, { id: 3, x: 52 }]);
 });
 
+test('nearby observations of one service NPC share a pin without merging different NPCs or distant spawns', () => {
+  const [out] = run(`
+    local records={}
+    for _,role in ipairs({"vendor","repair","banker","auctioneer","trainer","weapon","battlemaster","spirithealer","stablemaster","class:WARRIOR"}) do
+      records[#records+1]={id=#records+1,name=role,roles={role},spawns={
+        {map=9000,x=40,y=50,f="l"},{map=9000,x=40.2,y=50.2,f="l"},
+        {map=9000,x=40.6,y=50,f="l"},{map=9000,x=41.2,y=50,f="l"},
+      }}
+    end
+    local before=records[1].spawns[1]
+    local pins=M.BuildServicePins(records)
+    local counts={}
+    for _,p in ipairs(pins) do counts[p.category]=(counts[p.category] or 0)+1 end
+    local p=pins[1]
+    p.onClick("LeftButton")
+    local target=Polestar.Nav.GetTarget()
+    emit({count=#pins,categories=counts,first={id=p.id,x=p.x,y=p.y,f=p.f},
+      second={id=pins[2].id,x=pins[2].x},target={map=target.map,x=target.x,y=target.y,f=target.f},
+      unchanged=records[1].spawns[1]==before and #records[1].spawns==4})
+  `);
+  assert.deepEqual(out, {
+    count: 20,
+    categories: Object.fromEntries(['vendor','repair','banker','auctioneer','trainer','weapon','battlemaster','spirithealer','stablemaster','class'].map(k => [k,2])),
+    first: { id:1, x:40, y:50, f:'l' }, second: { id:1, x:41.2 },
+    target: { map:9000, x:40, y:50, f:'l' }, unchanged:true,
+  });
+});
+
+test('service observations compare world positions across maps and coordinate frames, with exact-only fallback for unknown maps', () => {
+  const [out] = run(`
+    stub.world.addMap(9100,{c=0,left=1000,right=-1000,top=1000,bottom=-1000})
+    stub.world.addMap(9101,{c=1,left=1000,right=-1000,top=1000,bottom=-1000})
+    local saved=Polestar.MapFrames.era[9100]
+    Polestar.MapFrames.era[9100]={c=0,left=2000,right=0,top=1000,bottom=-1000}
+    local pins=M.BuildServicePins({{id=101,name="Service",roles={"repair"},spawns={
+      {map=9000,x=40,y=50,f="l"},{map=9100,x=40.2,y=50,f="l"},
+      {map=9100,x=90,y=50,f="e"},{map=9100,x=40.2,y=50,f="e"},
+      {map=9101,x=40,y=50,f="l"},
+      {map=9199,x=40,y=50,f="l"},{map=9199,x=40,y=50,f="l"},
+      {map=9199,x=40,y=50,f="e"},{map=9199,x=40.2,y=50,f="l"},
+    }}})
+    local rows={}
+    for _,p in ipairs(pins) do rows[#rows+1]={map=p.map,x=p.x,f=p.f} end
+    Polestar.MapFrames.era[9100]=saved
+    emit(rows)
+  `);
+  assert.deepEqual(out, [
+    {map:9000,x:40,f:'l'}, {map:9100,x:40.2,f:'e'}, {map:9101,x:40,f:'l'},
+    {map:9199,x:40,f:'l'}, {map:9199,x:40,f:'e'}, {map:9199,x:40.2,f:'l'},
+  ]);
+});
+
+test('the reported Gishah observations produce one original Undercity waypoint', () => {
+  const [out] = run(`
+    stub.world.addMap(1458,{c=0,left=873.193,right=-86.182,top=1877.945,bottom=1237.841})
+    local spawns={}
+    for _,xy in ipairs({{64.4,38.4},{64.4,38.6},{64.6,38.6},{64.8,38.2},{65.6,38.4},{65.6,38.6}}) do
+      spawns[#spawns+1]={map=1458,x=xy[1],y=xy[2]}
+    end
+    local pins=M.BuildServicePins({{id=214098,name="Gishah",roles={"vendor"},spawns=spawns}})
+    emit({count=#pins,x=pins[1].x,y=pins[1].y,observations=#spawns})
+  `);
+  assert.deepEqual(out, {count:1,x:64.4,y:38.4,observations:6});
+});
+
 test('the records kept for filter changes are slim and friendly only', () => {
   const [out] = run(`
     __npcs[1].loot,__npcs[1].level={5},30
@@ -506,7 +571,7 @@ test('a fresh install leaves the Codex unloaded until the layer is on and the wo
     assert.equal(out.loaded,true);
     assert.equal(out.questie,false);
     // The lean default set: class trainers and mailboxes; the repair vendor stays opt-in.
-    assert.deepEqual(out.npcs,[{id:103,category:'class',x:40,y:50}, {id:103,category:'class',x:40.1,y:50.1}]);
+    assert.deepEqual(out.npcs,[{id:103,category:'class',x:40,y:50}]);
     assert.deepEqual(out.boxes,[{id:101,category:'mailbox',x:50,y:50},{id:103,category:'mailbox',x:70,y:50}]);
   } finally { pack.cleanup(); }
 });
