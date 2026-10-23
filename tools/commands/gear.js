@@ -14,7 +14,9 @@ build: the data behind Polestar's upgrade advice:
   addon/Polestar/Gear/SpecData.lua    stat weight bands per spec and level (Polestar's
                                       weights blended with wowsims, MIT), racial traits
 Reads the installed ForeverLevelingBiS and the wowsims cache under
-data/sources/wowsims (no network). Run \`itemdb build\` first.
+data/sources/wowsims (no network). Run \`itemdb build\` first. Only builds
+from MIT-licensed ForeverLevelingBiS versions: any other copy is refused and
+nothing is written.
 
 fetch: refresh the wowsims cache (pinned commits).
 

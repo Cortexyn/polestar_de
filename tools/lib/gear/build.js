@@ -11,13 +11,13 @@
 //   addon/Polestar/Gear/LICENSE-DATA.txt   the MIT notices of both
 // Local: data/forever/gear/report.json (counts and provenance of this run).
 //
-// ForeverLevelingBiS is required; without the wowsims cache the bands are
+// ForeverLevelingBiS is required, in an MIT-licensed version (any other is
+// refused and nothing is written); without the wowsims cache the bands are
 // Polestar's own weights, and the report says so.
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { readForeverLevelingBiS } = require('../consume/foreverlevelingbis');
-const { resolveAddonsDir } = require('../addons');
 const { buildForeverPack } = require('./leveling');
 const { weightBands, racials, emitSpecData } = require('./specdata');
 const { emitToc, packFiles, packageVersion, ADDON: ITEMDB } = require('../itemdb/build');
@@ -40,13 +40,13 @@ async function buildGear({ addons, root = ROOT, wowsimsCache, log = () => {} } =
 	const eraFile = path.join(itemDir, 'Items.lua');
 	if (!fs.existsSync(eraFile)) throw new Error(`${path.relative(root, eraFile)} missing: run \`itemdb build\` first`);
 
-	// 1. ForeverLevelingBiS -> Polestar_ItemDB/Forever.lua
-	const addonsRoot = resolveAddonsDir(addons);
+	// 1. ForeverLevelingBiS -> Polestar_ItemDB/Forever.lua. The reader refuses a
+	// copy that is not MIT-licensed before anything here is written.
 	const flb = readForeverLevelingBiS({ addons });
 	const pack = buildForeverPack(flb, fs.readFileSync(eraFile, 'utf8'));
 	writeAtomic(path.join(itemDir, 'Forever.lua'), pack.lua);
 	fs.writeFileSync(path.join(itemDir, `${ITEMDB}.toc`), emitToc(packageVersion(), packFiles(itemDir)));
-	const flbLicence = fs.readFileSync(path.join(addonsRoot, 'ForeverLevelingBiS', 'LICENSE'), 'utf8');
+	const flbLicence = flb.licence;
 	writeAtomic(path.join(itemDir, 'LICENSE-DATA.txt'), notice('Forever.lua holds facts derived from ForeverLevelingBiS by Thunder:', flbLicence));
 
 	// 2. wowsims (MIT; the cache only, `gear fetch` refreshes it)

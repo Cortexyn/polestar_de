@@ -95,14 +95,41 @@ function applyOverrides(items, overrides) {
 	}
 }
 
-// -> { meta, items, quests, chains, zones, factions, races, racials,
-//      proficiency: { weapon, armor }, dungeons, patterns }
+// Polestar builds only from MIT-licensed ForeverLevelingBiS versions: the
+// copy's LICENSE must hold the MIT licence's grant and warranty text, and
+// no reservation of rights. -> the LICENSE text; else throws (code
+// FLBIS_NOT_MIT) before anything is read from the addon.
+const MIT_GRANT = 'Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction';
+const MIT_WARRANTY = 'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND';
+
+function mitLicence(root) {
+	const file = path.join(root, 'LICENSE');
+	const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+	const flat = text === null ? '' : text.replace(/\s+/g, ' ');
+	const why = text === null ? 'it has no LICENSE file'
+		: !flat.includes(MIT_GRANT) || !flat.includes(MIT_WARRANTY) ? 'its LICENSE is not the MIT licence'
+			: /all rights reserved/i.test(flat) ? 'its LICENSE reserves rights beyond the MIT licence'
+				: null;
+	if (why) {
+		const version = addonVersion(root);
+		const err = new Error(`${ADDON}${version ? ` ${version}` : ''} at ${root}: ${why}. Polestar only builds from MIT-licensed ${ADDON} versions; install an MIT-licensed version (or pass the AddOns folder holding one) and build again. Nothing was written.`);
+		err.code = 'FLBIS_NOT_MIT';
+		throw err;
+	}
+	return text;
+}
+
+// -> { meta, licence (the LICENSE text), items, quests, chains, zones,
+//      factions, races, racials, proficiency: { weapon, armor }, dungeons,
+//      patterns }
 // `dir`: the addon folder (default: the installed copy under resolveAddonsDir).
+// Throws (code FLBIS_NOT_MIT) for a copy that is not MIT-licensed.
 function readForeverLevelingBiS({ dir, addons } = {}) {
 	const root = dir || path.join(resolveAddonsDir(addons) || '', ADDON);
 	if (!fs.existsSync(path.join(root, 'Data', 'Items.lua'))) {
 		throw new Error(`${ADDON} not found at ${root} (install it, or pass dir / set WOW_FOREVER_ADDONS)`);
 	}
+	const licenceText = mitLicence(root);
 	const files = FILES.map((f) => path.join(root, f)).filter((f) => fs.existsSync(f));
 	const raw = readAddonLua({ files, addonName: ADDON, expr: EXPR });
 
@@ -123,12 +150,12 @@ function readForeverLevelingBiS({ dir, addons } = {}) {
 		quests[id] = q;
 	}
 
-	const licence = fs.existsSync(path.join(root, 'LICENSE')) ? fs.readFileSync(path.join(root, 'LICENSE'), 'utf8').split('\n')[0].trim() : null;
+	const licence = licenceText.split('\n')[0].trim();
 	const meta = {
 		source: ADDON,
 		author: 'Thunder',
 		url: 'https://www.curseforge.com/wow/addons/forever-leveling-bis',
-		licence: licence || 'MIT (X-License in the TOC)',
+		licence: licence || 'MIT',
 		version: addonVersion(root),
 		...stampOf(path.join(root, 'Data', 'Items.lua')),
 		files: files.map((f) => path.relative(root, f).replace(/\\/g, '/')),
@@ -156,6 +183,7 @@ function readForeverLevelingBiS({ dir, addons } = {}) {
 
 	return {
 		meta,
+		licence: licenceText,
 		items,
 		quests,
 		chains: pairsToObject(raw.chains),
@@ -169,4 +197,4 @@ function readForeverLevelingBiS({ dir, addons } = {}) {
 	};
 }
 
-module.exports = { readForeverLevelingBiS, polestarStats, STAT_MAP, ADDON };
+module.exports = { readForeverLevelingBiS, mitLicence, polestarStats, STAT_MAP, ADDON };

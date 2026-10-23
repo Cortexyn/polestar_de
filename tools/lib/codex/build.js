@@ -1515,6 +1515,9 @@ async function loadInputs({ addons, offline = false, dataDir, sourcesDir, build,
 		try {
 			flbis = readForeverLevelingBiS({ addons: dir });
 		} catch (err) {
+			// A copy that is not MIT-licensed stops the build: the Codex keeps its
+			// ForeverLevelingBiS facts only from MIT-licensed versions.
+			if (err.code === 'FLBIS_NOT_MIT') throw err;
 			warnings.push(err.message);
 		}
 	}
