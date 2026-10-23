@@ -38,6 +38,11 @@ options:
   --out <dir>          output folder (default: data/forever)
   --sources <dir>      source cache folder (default: data/sources)
   --cap <n>            max spawn points per entity per map (default 24)
+  --corrections-private <file>
+                       the private corrections overlay merged over tools/lib/data/corrections.json
+                       (default: data/local/corrections-private.json, when present)
+  --no-corrections-private
+                       apply only the public corrections
   --built-at <iso>     timestamp for meta.json (default: now, or SOURCE_DATE_EPOCH)`;
 
 async function run(argv) {
@@ -65,6 +70,8 @@ async function run(argv) {
 				sources: { type: 'string' },
 				cap: { type: 'string' },
 				'built-at': { type: 'string' },
+				'corrections-private': { type: 'string' },
+				'no-corrections-private': { type: 'boolean' },
 			},
 			strict: true,
 		}));
@@ -103,6 +110,7 @@ async function run(argv) {
 		sourcesDir: abs(values.sources),
 		cap,
 		builtAt: values['built-at'],
+		correctionsPrivate: values['no-corrections-private'] ? false : abs(values['corrections-private']),
 		log: (msg) => console.error(msg),
 	});
 	for (const w of meta.warnings) console.error(`warning: ${w}`);

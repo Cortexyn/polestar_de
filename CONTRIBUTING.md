@@ -133,7 +133,10 @@ git grep "accept 184"
   vanishes after a while is checked by lint itself (`item ... lasts ...`).
 - When the guide is wrong because the data is (a giver, a spawn, a drop),
   fix the data in `tools/lib/data/corrections.json` too, so the simulator and
-  the next route refresh see it.
+  the next route refresh see it. Give the entry a `source` (an in-game check
+  or issue, a recording, the client, CMaNGOS, the Forever TrinityCore DB,
+  QuestieDB or pfQuest; the file's `_about` lists the kinds) and a `note` in
+  your own words.
 - **Do not commit `addon/Polestar_Guides/Guides.lua`.** It is compiled from
   `guides/` and `data/forever`; the maintainer runs `node tools/polestar.js
   compile` (via `polestar regen`) after merge. Never hand-edit it or splice

@@ -400,6 +400,23 @@ describe('fixture build', () => {
 		assert.equal(xp.revision, '1 quests; cache data/sources/webxp/quest-xp.json');
 	});
 
+	test('without the private corrections overlay: one plain line, a warning when the other private sources are there', async () => {
+		const line = 'private corrections: none found (public corrections only)';
+		const root = tmpdir('polestar-data-root-');
+		const logged = [];
+		const plain = await fixtureBuild({ root, log: (m) => logged.push(m) });
+		assert.deepEqual(logged.filter((m) => m.startsWith('private corrections')), [line]);
+		assert.equal(plain.result.meta.warnings.includes(line), false);
+		assert.equal(plain.result.meta.counts.correctionsPrivate, 0);
+		// The local knowledge base is here but the overlay is not: the same line, as a warning.
+		fs.mkdirSync(path.join(root, 'data', 'local', 'kb'), { recursive: true });
+		const missing = await fixtureBuild({ root, log: () => {} });
+		assert.deepEqual(missing.result.meta.warnings.filter((w) => w.startsWith('private corrections')), [line]);
+		// Turned off on purpose: no warning.
+		const off = await fixtureBuild({ root, correctionsPrivate: false, log: () => {} });
+		assert.equal(off.result.meta.warnings.includes(line), false);
+	});
+
 	test('output is byte-for-byte deterministic', async () => {
 		const a = await fixtureBuild();
 		const b = await fixtureBuild();

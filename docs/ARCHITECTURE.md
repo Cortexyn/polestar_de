@@ -4996,13 +4996,26 @@ exclusive group: pfQuest `close` united with QuestieDB `exclusiveTo`.
    placeholders, Season of Discovery leftovers), so presence there is not
    evidence that a quest is in the game.
 4. **Polestar corrections** (`tools/lib/data/corrections.json`, committed):
-   facts QuestieDB or pfQuest get wrong or lack, each with its source in a `note`:
+   facts QuestieDB or pfQuest get wrong or lack, each with the independent
+   evidence for it in `source` (`{ kind, ref }` or a list; kind `recording`,
+   `in-game-check`, `client`, `eg`, `cmangos`, `tdb`, `questie`, `pfquest` or
+   `factoruide`, `SOURCE_KINDS` in `tools/lib/data/corrections.js`) and what it
+   fixes in a `note`:
    quest fields (`set`), item sources to drop (`removeDrops`, `removeVendors`),
    npc/object fields (`set`: the Forever elite and rare ranks QuestieDB's
    Forever store lacks, since it gives every Forever npc rank 0, and renamed
-   Era records) and npc/object spawn maps (`addSpawns`). They are applied
-   after the merge, only in a build that reads QuestieDB, and the record's
-   `source` gains `polestar-correction`. One
+   Era records) and npc/object spawn maps (`addSpawns`). A fix whose only
+   support is a source we don't publish lives in the private overlay
+   `data/local/corrections-private.json` (same shape, not in the repository),
+   which `data build` merges over the public file entry by entry when it is
+   there (`--corrections-private <file>`, `--no-corrections-private`). The
+   build prints `private corrections: N applied from <path>` or `private
+   corrections: none found (public corrections only)`, the latter as a
+   warning when the web quest-list cache or `data/local/kb` or
+   `data/local/factcheck` is present, and records N in `meta.json` counts
+   `correctionsPrivate`. They are
+   applied after the merge, only in a build that reads QuestieDB, and the
+   record's `source` gains `polestar-correction`. One
    cleanup is general rather than per quest: `pre`, `preAll` and `preAny`
    never contain the quest itself or an id from its `excl`. QuestieDB
    preQuestSingle sometimes lists the whole exclusive group.

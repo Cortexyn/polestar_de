@@ -6,9 +6,49 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const corrections = require('../tools/lib/data/corrections.json');
+const { loadCorrections, overlayCorrections, SOURCE_KINDS } = require('../tools/lib/data/corrections');
 const { blockingPrereqs, closedByOf } = require('../tools/lib/data/prereqs');
+
+test('every public correction names an independent source, and its note cites no web page', () => {
+	const bad = [];
+	for (const section of ['quests', 'npcs', 'objects', 'items']) {
+		for (const [id, entry] of Object.entries(corrections[section] || {})) {
+			const sources = [].concat(entry.source || []);
+			if (!sources.length || !sources.every((s) => SOURCE_KINDS.includes(s.kind) && typeof s.ref === 'string' && s.ref)) bad.push(`${section} ${id}: source`);
+			if (typeof entry.note !== 'string' || /https?:|\[race=|snapshot/i.test(entry.note)) bad.push(`${section} ${id}: note`);
+		}
+	}
+	assert.deepEqual(bad, []);
+});
+
+test('the private overlay adds its entries and merges shared ones field by field', () => {
+	const pub = { _about: 'public', quests: { 1: { set: { start: { npc: [2] } }, source: { kind: 'tdb', ref: 'x' }, note: 'a' } }, npcs: {} };
+	const priv = { _about: 'private', quests: { 1: { set: { races: 8 }, note: 'b' }, 3: { set: { xp: 10 }, note: 'c' } }, objects: { 4: { addSpawns: {}, note: 'd' } } };
+	assert.deepEqual(overlayCorrections(pub, priv), {
+		_about: 'public',
+		quests: { 1: { set: { start: { npc: [2] }, races: 8 }, source: { kind: 'tdb', ref: 'x' }, note: 'b' }, 3: { set: { xp: 10 }, note: 'c' } },
+		npcs: {},
+		objects: { 4: { addSpawns: {}, note: 'd' } },
+	});
+	assert.deepEqual(pub.quests[1].set, { start: { npc: [2] } }, 'the public corrections stay as they were');
+});
+
+test('data build reads the overlay from data/local only when it is there, or the file it is given', () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'polestar-corr-'));
+	assert.deepEqual(loadCorrections({ root }), corrections, 'no overlay: the public file alone');
+	fs.mkdirSync(path.join(root, 'data', 'local'), { recursive: true });
+	const file = path.join(root, 'data', 'local', 'corrections-private.json');
+	fs.writeFileSync(file, JSON.stringify({ quests: { 1: { set: { xp: 1 }, note: 'private' } } }));
+	assert.deepEqual(loadCorrections({ root }).quests[1], { set: { xp: 1 }, note: 'private' });
+	assert.deepEqual(loadCorrections({ root, privateFile: false }), corrections, '--no-corrections-private');
+	assert.deepEqual(loadCorrections({ privateFile: file }).quests[1].note, 'private', '--corrections-private <file>');
+	fs.rmSync(root, { recursive: true, force: true });
+});
 
 test('every prerequisite correction blocks the quest until its prerequisites are turned in', () => {
 	const dead = [];
