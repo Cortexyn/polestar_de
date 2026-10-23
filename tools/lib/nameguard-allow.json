@@ -1,7 +1,7 @@
 {
 	"note": [
 		"Tracked files allowed to name the web quest databases tools/lib/nameguard.js guards against, with why (excluded: third-party notices and the Names addons, rebuilt separately; phase2: code identifiers, data tags, flags, cache paths and code-emitted strings still to rename; guard: this list, whose paths name them).",
-		"The list only shrinks: tests/nameguard.test.js fails when a file not listed here names them, and when a listed file no longer does (drop it from the list)."
+		"The list only shrinks: tests/nameguard.test.js fails when a file not listed here names them, and when a listed file no longer does (drop it from the list). No entry can be added as phase2; a new entry is { \"kind\": \"excluded\", \"reason\": \"...\" }, decided by the maintainers in review."
 	],
 	"files": {
 		"CHANGELOG.md": "phase2",
