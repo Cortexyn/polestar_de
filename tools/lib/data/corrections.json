@@ -1458,7 +1458,8 @@
 		},
 		"6981": {
 			"set": {
-				"xp": 5150
+				"xp": 5150,
+				"objectives": []
 			},
 			"source": [
 				{
@@ -1468,9 +1469,13 @@
 				{
 					"kind": "factoruide",
 					"ref": "Factoruide row sources: collector"
+				},
+				{
+					"kind": "client",
+					"ref": "quest cache, build 1.60.1.70450"
 				}
 			],
-			"note": "The Glowing Shard (Wailing Caverns) rewards 5,150 XP on Forever; the merged data had 2,650, the Classic value. Forever about doubled dungeon quest XP, and the value here is the one players' game caches give after the 1 October 2026 change that halved the extra (build 70170). Issue #394."
+			"note": "The Glowing Shard (Wailing Caverns) rewards 5,150 XP on Forever; the merged data had 2,650, the Classic value. Forever about doubled dungeon quest XP, and the value here is the one players' game caches give after the 1 October 2026 change that halved the extra (build 70170). Issue #394. The quest asks only for the item that starts it (10441); the extra kill objective was wrong."
 		},
 		"7042": {
 			"set": {
@@ -2445,6 +2450,23 @@
 				"ref": "quest_template_addon PrevQuestID"
 			},
 			"note": "Unending Torment (97292) is step 5 of the chain 97288 -> 97289 -> 97290 -> 97291 -> 97292: Faranell's Hissing Serum is made from 97291's reagents. QuestieDB has no prerequisite."
+		},
+		"97903": {
+			"set": {
+				"objectives": [
+					{
+						"type": "event",
+						"id": null,
+						"count": 1,
+						"text": "Raise your first aid skill to 20"
+					}
+				]
+			},
+			"source": {
+				"kind": "client",
+				"ref": "quest cache, build 1.60.1.70450"
+			},
+			"note": "Camping 101: First Aid: the objective is to raise First Aid to 20, not a kill."
 		},
 		"98094": {
 			"set": {
