@@ -1,8 +1,8 @@
 'use strict';
 // `data build`: pfQuest + QuestieDB (Forever) + Blizzard map tables +
 // recordings -> data/forever/*.json (schema: docs/ARCHITECTURE.md, Toolchain ->
-// Reference data). Precedence: recordings > questie-forever > pfQuest; Wowhead
-// Forever's change notes update values we still hold from before Forever
+// Reference data). Precedence: recordings > questie-forever > pfQuest; Forever's
+// change notes update values we still hold from before Forever
 // (tools/lib/data/wowhead.js).
 
 const crypto = require('node:crypto');
@@ -221,7 +221,7 @@ async function buildData(options = {}) {
 		qstats = applyQuestie(norm, qz, { areaToUiMap, liveMaps: live, spawnOptions, toWorld, instanceOfArea, questCounts: questCounts && questCounts.counts });
 	}
 
-	// Wowhead Forever's change notes (the cached zone lists), before our own corrections.
+	// Forever's change notes (the cached zone lists), before our own corrections.
 	let wh = null;
 	if (qz && options.wowhead) {
 		const zl = loadZoneQuests({ sourcesDir });

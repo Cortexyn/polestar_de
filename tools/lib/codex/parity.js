@@ -22,7 +22,7 @@
 // (present in the mapped instance), bosses with loot, boss loot items, drop
 // chances (same item and npc on both sides; equal within 25% relative or 1
 // point, else different: a match only when ours comes from recordings,
-// QuestieDB's Forever rates or Wowhead Forever's looted-kill counts), rares (present), rare positions,
+// QuestieDB's Forever rates or Forever's looted-kill counts), rares (present), rare positions,
 // rare levels, rare loot, treasures, treasure positions, treasure loot,
 // items with a source, items per source type, mounts / pets / tabards
 // (present, kind, sources, status), journal quests (on the page), quest
@@ -103,7 +103,7 @@ function bossKey(b) {
 }
 
 // Evidence for a disagreement, strongest first: recordings > the Forever
-// client's tables > Wowhead Forever > pfQuest / QuestieDB > AtlasLoot /
+// client's tables > Forever's data > pfQuest / QuestieDB > AtlasLoot /
 // RareScanner / DungeonJournal. `verify` = { wowhead: loadWowhead(),
 // clientInstances: Set(normalised Map names), instanceAreas: Set(AreaTable
 // ids on instance maps) | null } checks each internal-only
@@ -136,7 +136,7 @@ function verdictOf(kindName, row, verify, theirs) {
 	if (kindName === 'drop chances') return dropCheck(b, a);
 	if (kindName === 'items: rep') {
 		// A standing on the tooltip confirms; none proves nothing (a vendor's
-		// or a quest's gate is on no tooltip, and Wowhead's Sells standing is
+		// or a quest's gate is on no tooltip, and Forever's Sells standing is
 		// the same ItemSparse MinReputation).
 		const t = wh.item[a];
 		if (!t) return 'unverified';
@@ -467,7 +467,7 @@ function compareCodex(ours, theirs, verify = null) {
 		}
 	}
 	// A confirmed missing boss (Forever has the NPC) that Forever's sources do
-	// not make a boss of this instance says why: Wowhead Forever (or ours)
+	// not make a boss of this instance says why: Forever's NPC data (or ours)
 	// places it outside every instance (verify.instanceAreas: the AreaTable
 	// areas on instance maps), or ranks it an ordinary NPC (no boss flag, not
 	// rare) without loot of its own. Still a confirmed row; counted in

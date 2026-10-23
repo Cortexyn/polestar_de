@@ -24,7 +24,7 @@ const { addonVersion, readAddonLua, pairsToObject } = require('./lua');
 const ADDON = 'ForeverLevelingBiS';
 const FILES = ['Data/Tables.lua', 'Data/Items.lua', 'Data/Quests.lua', 'Data/Overrides.lua', 'Racials.lua'];
 
-// Wowhead stat keys (as the addon stores them) -> Polestar stat keys. A
+// Database stat keys (as the addon stores them) -> Polestar stat keys. A
 // "spell power" item (splpwr) raises damage and healing alike; spldmg is
 // damage only and splheal healing only. Resistances are not scored.
 const STAT_MAP = {

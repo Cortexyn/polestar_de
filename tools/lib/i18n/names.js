@@ -12,7 +12,7 @@
 // Sources, per id, the first one with a name winning:
 //   1. The Forever client's own tables in that language, from wago.tools
 //      (names-wago.js): items (ItemSparse), map, encounter, faction, taxi.
-//   2. Wowhead's Forever database in that language (names-wowhead.js): its
+//   2. Forever's quest data in that language (names-wowhead.js): its
 //      list pages and tooltips, read only from what is already cached in
 //      data/sources/wowhead/names, when present.
 //      The only source for the names of Forever's own quests, NPCs and
@@ -346,7 +346,7 @@ function addEnglish(english, kind, id, name) {
 // (--no-questie); pf: loadPfQuestNames' with enUS among its locales; wago:
 // loadClientNames' names ({ [locale]: { item, map, encounter, faction, taxi } })
 // or null; wowhead: { [locale]: loadWowheadNames' } or null; english: the
-// English names (addEnglish), with pfQuest's enUS and Wowhead's English lists
+// English names (addEnglish), with pfQuest's enUS and the web English lists
 // beside them. Per id the first source with a name that is no English name
 // wins, so any real translation beats a string some source left in English;
 // an id whose names are all English gets none (the English shows anyway). A

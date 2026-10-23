@@ -2,9 +2,9 @@
 // Quest XP for quests QuestieDB's QuestXP table lacks (mostly Forever-only
 // ones), from two public Forever databases (used with
 // permission; results stay in data/, which is gitignored):
-// - wowforevertalents.com: quest pages read from the Forever beta client's
+// - the Forever client's quest cache: quest pages read from the beta client's
 //   quest cache ("Rewards ... XP 1,350"); its sitemap lists the pages.
-// - foreverchanges.pro: /quest/<id> pages from Wowhead's Forever database:
+// - Forever's quest chain data: /quest/<id> pages from Forever's quest data:
 //   the page's own Rewards block ("Experience: 550"), else the XP its quest
 //   chain list shows for this quest (source tag "foreverchanges:xp-chain").
 // The client-cache site wins when both have a value. Results are cached in
@@ -27,7 +27,7 @@ function int(s) {
 	return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-// wowforevertalents quest page -> xp | null
+// client-cache quest page -> xp | null
 function parseWft(html) {
 	const t = text(html);
 	const i = t.indexOf('Rewards');
@@ -35,7 +35,7 @@ function parseWft(html) {
 	return m ? int(m[1]) : null;
 }
 
-// foreverchanges quest page -> { xp, chain } | null: its own Rewards block,
+// quest chain data page -> { xp, chain } | null: its own Rewards block,
 // else the chain list's entry marked as this quest.
 function parseFc(html) {
 	const m = /Experience:[|\s]*([\d,]+)/.exec(text(html));

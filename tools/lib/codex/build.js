@@ -24,7 +24,7 @@
 // Precedence for one fact found in several inputs (docs/SUITE.md, "Data
 // layer"): recordings > client tables > Forever-specific (QuestieDB Forever,
 // ForeverLevelingBiS, RareScanner, DungeonJournal) > Era (pfQuest, AtlasLoot)
-// > Wowhead. Sources of one item dedupe by type + npc/object/quest/spell/
+// > Forever's item data. Sources of one item dedupe by type + npc/object/quest/spell/
 // faction; each field comes from the highest-ranked input that has it and
 // `from` keeps every input.
 
@@ -85,7 +85,7 @@ const SERVICE_ROLES = new Set(['vendor', 'repair', 'innkeeper', 'banker', 'aucti
 // signature drop from it): its own drops (items nothing else drops or holds)
 // first, then best-known chance. A rare's candidates run to hundreds (the
 // world-drop pool; median 286), so the list is cut: 150 keeps every drop
-// RareScanner names for a rare or treasure Wowhead Forever confirms.
+// RareScanner names for a rare or treasure Forever's data confirms.
 const LOOT_CAP = 150;
 
 // Class mount spells the client tables give no class for (SkillLineAbility
@@ -575,9 +575,9 @@ function mergeCodex(inputs) {
 		};
 		npcRoles[id] = new Set(n.roles || []);
 	}
-	// Wowhead Forever per-entity facts (tools/lib/codex/wowhead.js), release
+	// Forever's cached per-entity facts (tools/lib/codex/wowhead.js), release
 	// build only: a level, rare rank or spawns our data lacks, and the rares
-	// only Wowhead knows (with a name and a place).
+	// only that data knows (with a name and a place).
 	const wh = (!al && inputs.wowhead) || null;
 	if (wh) {
 		for (const [id, w] of Object.entries(wh.npc)) {
@@ -586,7 +586,7 @@ function mergeCodex(inputs) {
 			const spawns = spawnsOf(live, zonesIn, fv.mapFrames);
 			let rec = npcs[id];
 			if (!rec) {
-				// An NPC only Wowhead knows: a rare with a place, or anything that drops.
+				// An NPC only Forever's data knows: a rare with a place, or anything that drops.
 				if (!w.name || JUNK.test(w.name) || !(rareW ? spawns.length : spawns.length || (w.drops || []).length)) continue;
 				const elite = ['rareelite', 'elite', 'boss'].includes(w.classification);
 				rec = npcs[id] = { id: Number(id), name: w.name, level: null, levelMax: null, faction: null, rare: rareW, elite, boss: w.classification === 'boss', instance: null, roles: [], spawns };
@@ -603,7 +603,7 @@ function mergeCodex(inputs) {
 			}
 			if (!rec.spawns.length && spawns.length) rec.spawns = spawns;
 		}
-		// Wowhead's cached NPC list rows (data/sources/wowhead/codex/lists):
+		// Forever's cached NPC list rows (data/sources/wowhead/codex/lists):
 		// the level of an NPC neither our data nor a page gives one. Only the
 		// level: a row's rank and place are no page's (rares and bosses stay
 		// the pages' and the data's).
@@ -950,9 +950,9 @@ function mergeCodex(inputs) {
 		}
 	}
 	for (const [id, x] of Object.entries(dungeonItems)) if (!names[id]) names[id] = x.name;
-	// Wowhead Forever's quest lists (quests.json `wowhead`, data build), last:
+	// Forever's quest lists (quests.json `wowhead`, data build), last:
 	// the reward items no recording, ForeverLevelingBiS or dungeons.json row
-	// names, each as Wowhead files it (one of `choices`, or every one of
+	// names, each as Forever's data files it (one of `choices`, or every one of
 	// `items`). Its lists carry most dungeon quests' rewards these lack.
 	for (const [qid, q] of Object.entries(fv.quests || {})) {
 		const w = q.wowhead;
@@ -1050,7 +1050,7 @@ function mergeCodex(inputs) {
 	const items = {};
 	const factionByName = {};
 	for (const f of Object.values(factions)) factionByName[normName(f.name)] = f.id;
-	// noPvp: items Wowhead's Forever tooltip shows without a PvP rank. cut:
+	// noPvp: items Forever's item tooltip shows without a PvP rank. cut:
 	// what a cap left out (parity's reason, not shipped): drop { item: [npc] },
 	// rare { npc: [item] }, treasure { object: [item] }.
 	const evidence = { noPvp: [], cut: { drop: {}, rare: {}, treasure: {} } };
@@ -1064,7 +1064,7 @@ function mergeCodex(inputs) {
 			const vendor = list.find((s) => s.type === 'vendor');
 			list.push({ type: 'rep', faction: c.minFaction, standing: c.minStanding, npc: vendor ? vendor.npc : null, from: ['client'] });
 		}
-		// Wowhead Forever's tooltip: the reputation and PvP rank the item asks for.
+		// Forever's item tooltip: the reputation and PvP rank the item asks for.
 		const tip = wh && wh.item[id];
 		if (tip) {
 			const vendor = list.find((s) => s.type === 'vendor');
@@ -1083,7 +1083,7 @@ function mergeCodex(inputs) {
 			if (faction) list.push({ type: 'rep', faction, standing: g.standing, npc: g.npc, from: ['guides'] });
 		}
 		// An NPC that casts a spell creating the item (the client's SpellEffect;
-		// who casts it, Wowhead Forever's spell page) hands it out.
+		// who casts it, Forever's spell data) hands it out.
 		for (const spell of (cl && cl.creates && cl.creates[id]) || []) {
 			for (const npc of (wh && wh.spell && wh.spell[spell] && wh.spell[spell].usedBy) || []) {
 				if (npcs[npc]) list.push({ type: 'gift', npc, spell, from: ['wowhead'] });
@@ -1492,7 +1492,7 @@ async function loadInputs({ addons, offline = false, dataDir, sourcesDir, build,
 		instances: j('instances.json', true) || {},
 		dungeons: localExtras ? j('dungeons.json', true) : null,
 	};
-	// Wowhead Forever per-entity facts already cached in
+	// Forever's per-entity facts already cached in
 	// data/sources/wowhead/codex/ (nothing is fetched), release builds only.
 	const wowhead = localExtras ? null : loadWowhead(sourcesDir);
 	const warnings = [];
@@ -1706,14 +1706,14 @@ async function buildCodex(opts = {}) {
 	return { codex: out, files, outDir, packDir, bytes, memory, parity, warnings: [...(inputs.warnings || []), ...mergeWarnings, ...journalWarnings], ms: Date.now() - t0 };
 }
 
-// What checks an internal-only fact (tools/lib/codex/parity.js): Wowhead's
+// What checks an internal-only fact (tools/lib/codex/parity.js): Forever's
 // cached pages and the Forever client's instance maps.
 function verifyOf(inputs) {
 	const norm = (x) => String(x || '').toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
 	return {
 		wowhead: inputs.wowhead || { npc: {}, object: {}, item: {} },
 		clientInstances: new Set(((inputs.client && inputs.client.instanceMaps) || []).map((m) => norm(m.name))),
-		// The AreaTable areas on instance maps (Wowhead's `location` inside one).
+		// The AreaTable areas on instance maps (a `location` inside one).
 		instanceAreas: inputs.client ? new Set((inputs.client.instanceMaps || []).flatMap((m) => m.inner || [])) : null,
 	};
 }

@@ -177,7 +177,7 @@ test('node tools/polestar.js i18n names writes the folders and reports what each
 	const report = JSON.parse(r.stdout);
 	assert.equal(report.ding, null);
 	assert.equal(report.wago, null);
-	assert.equal(report.wowhead, null, 'no Wowhead cache: nothing from it, nothing asked for');
+	assert.equal(report.wowhead, null, 'no web names cache: nothing from it, nothing asked for');
 	assert.deepEqual(Object.fromEntries(names.NAME_KINDS.map((k) => [k, report.locales.frFR.names[k]])), { quest: 2, npc: 2, object: 1, item: 1 });
 	assert.deepEqual([report.locales.frFR.sameAsEnglish.npc, report.locales.frFR.lacking.npc], [1, report.ids.npc - 3],
 		'what each language lacks, apart from Marshal McBride, whose only French name is the English one');

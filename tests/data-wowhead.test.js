@@ -1,5 +1,5 @@
 'use strict';
-// data build, Wowhead Forever: the cached zone quest lists and how their
+// data build, Forever's quest data: the cached zone quest lists and how their
 // change notes and XP reach quests.json.
 
 const { test, describe } = require('node:test');
@@ -14,7 +14,7 @@ function quest(id, extra = {}) {
 	return { id, title: `Quest ${id}`, level: 20, minLevel: 15, xp: null, source: ['pfquest', 'questie-forever'], ...extra };
 }
 
-describe('Wowhead zone quest lists', () => {
+describe('Forever zone quest lists', () => {
 	test('reads XP, level and required level notes; other notes are ignored', () => {
 		assert.deepEqual(parseChangeNotes(['Experience 3,300 instead of 820', 'Requires level 26 instead of 28', 'Level 30 instead of 25', 'Description reworded', 'Experience 630 instead of none']), [
 			{ field: 'xp', value: 3300, was: 820 },
@@ -36,7 +36,7 @@ describe('Wowhead zone quest lists', () => {
 	});
 });
 
-describe('Wowhead change notes and XP', () => {
+describe('Forever change notes and XP', () => {
 	const rows = new Map([
 		[606, { id: 606, status: 'updated', xp: 3300, lines: ['Experience 3300 instead of 820'] }],
 		[472, { id: 472, status: 'updated', xp: 1200, lines: ['Level 30 instead of 25', 'Requires level 26 instead of 28'] }],
@@ -71,10 +71,10 @@ describe('Wowhead change notes and XP', () => {
 		assert.equal(fillWowheadXp(quests, rows), 1);
 		assert.equal(quests[99].xp, 630);
 		assert.deepEqual(quests[99].source, ['questie-forever', 'wowhead:xp']);
-		assert.equal(quests[7738].xp, 2200, 'an unchanged quest whose Wowhead XP differs keeps ours');
+		assert.equal(quests[7738].xp, 2200, 'an unchanged quest whose list XP differs keeps ours');
 	});
 
-	test('Wowhead facts: instance, type, side, rewards; an item in both lists is a choice unless a note says it no longer is', () => {
+	test('quest list facts: instance, type, side, rewards; an item in both lists is a choice unless a note says it no longer is', () => {
 		const quests = { 166: quest(166), 962: quest(962), 1486: quest(1486), 1367: quest(1367), 7: quest(7) };
 		const facts = new Map([
 			[166, { id: 166, zone: 1581, type: 81, side: 1, choices: [[6087, 1]], items: [], money: 0, rep: [[72, 200]], lines: [] }],

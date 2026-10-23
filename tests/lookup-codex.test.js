@@ -381,7 +381,7 @@ emit({ take = ids(plan and plan.take, function(t) return t.quest.id end), accept
 // Issue #50 (Arachnit): Unending Torment (97288-97292, Horde) starts from the
 // Abominable Head The Baron drops in the Ruins of Lordaeron; Master
 // Apothecary Faranell gives the rest of it in the Undercity once the head is
-// hers (Wowhead Forever's Series box and quest texts; tools/lib/data/corrections.json).
+// hers (Forever's Series box and quest texts; tools/lib/data/corrections.json).
 test("Arachnit's report: the Ruins of Lordaeron pick-up guide of a level 23 Orc Warrior takes no Unending Torment before the run; after it, the Abominable Head goes to Faranell, who gives the next one", { skip }, () => {
 	const TORMENT = [97288, 97289, 97290, 97291, 97292];
 	const orc = { race: 'Orc', faction: 'Horde', cls: 'WARRIOR', level: 23, at: [1458, 66, 44] };

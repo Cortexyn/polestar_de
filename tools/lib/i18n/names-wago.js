@@ -3,7 +3,7 @@
 // tables (DB2) as wago.tools exports them with `&locale=`
 // (tools/lib/data/wago.js), cached per build and language in
 // data/sources/wago/<build>/<locale>/<Table>.csv. The client's text is the
-// most exact name there is, so these come before Wowhead, DingDB and pfQuest.
+// most exact name there is, so these come before the web names, DingDB and pfQuest.
 //
 // From the Forever client's tables:
 //   item       ItemSparse.Display_lang
@@ -13,8 +13,8 @@
 //   taxi       TaxiNodes.Name_lang (flight points)
 // Forever's ItemSparse holds only part of the Classic items (the rest load
 // from the server): for those, the Classic Era client's ItemSparse, whose
-// items Forever kept. Forever's newest items are in neither: Wowhead names
-// those. Areas need nothing here: the client names them by id
+// items Forever kept. Forever's newest items are in neither: the web
+// names give those. Areas need nothing here: the client names them by id
 // (C_Map.GetAreaInfo, Compat.GetAreaName) from the same AreaTable.
 
 const fs = require('node:fs');

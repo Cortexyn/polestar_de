@@ -769,7 +769,7 @@ test('mergeCodex: an NPC casting a spell that creates the item hands it out (gif
 	assert.deepEqual(it[20001].sources, [{ type: 'gift', npc: 4730, spell: 21357, from: ['wowhead'] }], 'an NPC the data does not know is left out');
 });
 
-test('mergeCodex: a Wowhead list row gives the level of an NPC nothing else does, only the level', () => {
+test('mergeCodex: a Forever list row gives the level of an NPC nothing else does, only the level', () => {
 	const inputs = syntheticInputs();
 	delete inputs.atlasloot;
 	inputs.forever.npcs[7747].level = null;

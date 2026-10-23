@@ -1,5 +1,5 @@
 'use strict';
-// Drops and loot in a release Codex: a boss's own table before Wowhead's
+// Drops and loot in a release Codex: a boss's own table before Forever's
 // world-drop pool (tools/lib/codex/instances.js), a rare's or treasure's own
 // drops first and LOOT_CAP, what each cap cuts (evidence.cut) and the reason
 // parity gives those rows (tools/lib/codex/build.js, parity.js).
@@ -19,7 +19,7 @@ const TABLES = {
 	MapDifficulty: [],
 };
 
-test("buildInstances: a boss's own Wowhead table (any rate) before the world-drop pool (commondrop, 1% or more)", () => {
+test("buildInstances: a boss's own Forever drop table (any rate) before the world-drop pool (commondrop, 1% or more)", () => {
 	const drop = (item, count, common = false) => ({ item, count, outof: 1000, common });
 	const { instances } = buildInstances(instanceFacts(TABLES, [{ ID: '249' }]), {
 		npcs: { 10184: { id: 10184, name: 'Onyxia', level: 63, rank: 3, spawns: {}, source: ['pfquest'] } },

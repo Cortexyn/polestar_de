@@ -1,5 +1,5 @@
 'use strict';
-// The cached Wowhead Forever facts the Codex reads (tools/lib/codex/wowhead.js):
+// The cached Forever facts the Codex reads (tools/lib/codex/wowhead.js):
 // pages and list rows from data/sources/wowhead/codex/, nothing fetched.
 
 const { test } = require('node:test');
@@ -26,7 +26,7 @@ test('loadWowhead keeps the list rows apart from the pages (listed)', () => {
 	const wh = loadWowhead(sourcesDir);
 	assert.equal(wh.npc[5].name, 'Paged', 'a page stays the page');
 	assert.equal(wh.npc[6], undefined, 'a row is no page: parity reads pages only');
-	assert.equal(wh.npc[7], undefined, 'a page Wowhead had not is no entity');
+	assert.equal(wh.npc[7], undefined, 'a page the source had not is no entity');
 	assert.deepEqual(Object.keys(wh.listed.npc), ['5', '6']);
 	assert.deepEqual(wh.listed.npc[6].level, [9, 10]);
 });

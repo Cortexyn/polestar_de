@@ -242,7 +242,7 @@ const CAVES = [
 	// Thazz'ril's Pick and Yarrog Baneshadow: "Go in the cave (45 56)".
 	{ cave: 'the Burning Blade Coven (the pick)', guide: DUROTAR, target: (g) => g.t === 'collect' && g.item === 16332, mouth: { map: 1411, x: 45, y: 56 } },
 	{ cave: 'Skull Rock', guide: DUROTAR, target: (g) => g.t === 'collect' && g.item === 4871, mouth: { map: 1411, x: 55, y: 10 } },
-	// The troll cave's mouth as marked in game (thmastin, PR #16); Wowhead's comments put it at 26,79.
+	// The troll cave's mouth as marked in game (thmastin, PR #16); players' reports put it near 26,79.
 	{ cave: 'the Coldridge troll cave', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 2004, mouth: { map: 1426, x: 26.93, y: 80.03 } },
 	// The Grizzled Den's mouth as marked in game (thmastin); Flintfire's shipments lie inside.
 	{ cave: 'the Grizzled Den', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 280413, mouth: { map: 1426, x: 42.57, y: 54.68 } },
@@ -708,7 +708,7 @@ test(`Hotline's report: a Paladin heals the Injured Deathguard before turning in
 
 // --- Tirisfal (yiliev0, a Scourge Paladin, #672): the arrow for the Injured
 // Deathguard pointed 60 yards north of the church, while some lie in front
-// of it (Wowhead Forever pins 31.6,65.8; a data/forever spawn at 31.59,65.83).
+// of it (Forever's quest data pins 31.6,65.8; a data/forever spawn at 31.59,65.83).
 
 test(`yiliev0's report (#672): the healing step leads to the Injured Deathguard in front of the church`, { skip }, () => {
 	const list = goals(TIRISFAL).filter(forClass('PALADIN'));
@@ -994,7 +994,7 @@ test(`${HILLSBRAD_ALLIANCE}: Lou-Saydus's report: Nek'rosh's Gambit, taken after
 });
 
 // --- Westfall (#144): Alba Fairmoon's Toxic Soil chain is not for Humans on
-// Forever (Wowhead Forever: Dwarf, Night Elf, Gnome, Skyborne).
+// Forever (Forever's quest data: Dwarf, Night Elf, Gnome, Skyborne).
 
 test(`${WESTFALL}: Alba Fairmoon's chain is not given to Humans (#144)`, { skip }, () => {
 	const chain = new Set([92742, 92744, 92745, 92747, 92748]);
@@ -1229,7 +1229,7 @@ test(`${ZEPHRAS_HORDE}: Sato's report: Welcome to Shen'dar Village follows its o
 });
 
 // Aggressive Encroachment: the Scrawny Ursera are on the slope west of
-// Thendal Village (Wowhead Forever), not in the village.
+// Thendal Village (Forever's quest data), not in the village.
 test('Sato\'s report: the Scrawny Ursera step leads to the slope west of Thendal Village', { skip }, () => {
 	const corrections = require('../tools/lib/data/corrections.json');
 	const wowhead = corrections.npcs[250926].addSpawns[2521].pts;
@@ -1707,7 +1707,7 @@ test(`${ELWYNN}: zeike's report (#553): Forest's Edge does not wait for the rare
 });
 
 // --- A goal on a neighbour's map (#246): Kadrak stands at the Mor'shan
-// Rampart, in the Barrens (Wowhead Forever; AreaTable puts the Rampart, 1703,
+// Rampart, in the Barrens (Forever's quest data; AreaTable puts the Rampart, 1703,
 // under the Barrens), where the Barrens and Ashenvale maps overlap. The step's
 // `zone Ashenvale` put him on Ashenvale's map, so the travel planner took him
 // for a target in Ashenvale and sent players on the Gold Road through the
@@ -1745,11 +1745,11 @@ test('#246: every goal with Tirion leads to Tirion Fordring at his hut, never to
 
 // The same pattern everywhere: where the zone maps overlap, the data spawns an
 // NPC or object at one spot on both maps, and the step's zone picks the map.
-// A goal on the map of a zone Wowhead Forever does not list it in, while the
-// data has it at that spot on a map of one Wowhead lists, routes the player
+// A goal on the map of a zone Forever's quest data does not list it in, while
+// the data has it at that spot on a map of one it lists, routes the player
 // standing beside it through the crossing to the other zone and back (the
 // travel planner takes the target's zone from its map). Drops count when no
-// dropper is listed in the goal's zone. Needs Wowhead Forever's list cache
+// dropper is listed in the goal's zone. Needs Forever's list cache
 // (data/sources/wowhead/codex, `polestar codex build`).
 const NEIGHBOUR_MAP = new Set([
 	// The optional hand-in at Garush shares a step with the Alliance's at Pureheart in Western Plaguelands.
@@ -1757,7 +1757,7 @@ const NEIGHBOUR_MAP = new Set([
 ]);
 const wowheadLists = fs.existsSync(path.join(SOURCES, 'wowhead', 'codex', 'lists', 'npc.json'));
 
-test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two maps overlap', { skip: skip || (!wowheadLists && 'no Wowhead Forever list cache (data/sources/wowhead/codex/lists)') }, () => {
+test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two maps overlap', { skip: skip || (!wowheadLists && 'no Forever list cache (data/sources/wowhead/codex/lists)') }, () => {
 	const wh = loadWowhead(SOURCES).listed;
 	data = data || loadData(DATA);
 	const area = (map) => data.zone(map) && data.zone(map).areaId;
@@ -1787,7 +1787,7 @@ test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two
 			if (elsewhere && !NEIGHBOUR_MAP.has(key)) offenders.push(`${key} (step ${step.title}, map ${goal.map})`);
 		}
 	}
-	assert.deepEqual([...new Set(offenders)], [], 'goals on the map of a zone Wowhead Forever does not place them in');
+	assert.deepEqual([...new Set(offenders)], [], 'goals on the map of a zone Forever\'s quest data does not place them in');
 });
 
 // --- Ashenvale (Zerkness #383, Ioney #396): two Paladins found no Alonso at
@@ -1947,7 +1947,7 @@ test(`Tazul's report: Elemental Bracers counts the five bracers before the Divin
 
 // --- Harvesting the Harvesters (Smuve, #298): the Precessive Autocognition
 // Assembly that starts it drops about once in 900 kills of the Molsen Farm
-// golems and watchers (Wowhead Forever item=255155: 161 of 187,474 Harvest
+// golems and watchers (Forever's quest data, item 255155: 161 of 187,474 Harvest
 // Watchers, 54 of 46,307 Rusty Harvest Golems, checked 2026-10-17). The loot
 // and the accept are optional goals of the farm step, so it does not wait for
 // a drop most players never see; the turn-in at Saldean's Farm is plain and

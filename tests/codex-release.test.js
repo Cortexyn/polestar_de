@@ -299,7 +299,7 @@ test('compareCodex: per-kind match against the internal build, missing and diffe
 	assert.deepEqual(r.needsRecording.map((n) => [n.kind, n.event]), [['instance', 'enter, encounter'], ['rare', 'rare, slain + drop']]);
 	assert.match(markdown(r), /^\| instances \| 2 \| 1 \| 50\.0% \| 0 \| 0 \| 1 \| 0 \| 0 \|$/m);
 
-	// Checked against Wowhead Forever and the client: what Forever lacks is the internal build's error, not a gap.
+	// Checked against Forever's data and the client: what Forever lacks is the internal build's error, not a gap.
 	const verify = { wowhead: { npc: { 62: { classification: 'normal', drops: [], spawns: {} } }, object: {}, item: { 3: { rep: [], pvpRank: null } } }, clientInstances: new Set() };
 	const v = compareCodex(ours, theirs, verify);
 	assert.deepEqual(v.kinds.instances.internalOnly, { confirmed: 0, notInForever: 1, unverified: 0 });

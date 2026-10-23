@@ -135,7 +135,7 @@ test("buildJournal: kp's report: a game event's quest (the Darkmoon Faire's Copp
 	assert.deepEqual(on(90002), ['deadmines'], 'an event quest filed under the instance stays');
 });
 
-test('buildJournal: a stray drop (only Wowhead records it, under 5%) ties no quest to a dungeon; a quest drop does', () => {
+test('buildJournal: a stray drop (only the Forever item lists record it, under 5%) ties no quest to a dungeon; a quest drop does', () => {
 	const c = structuredClone(codex);
 	const i = structuredClone(inputs);
 	c.npcs[16014] = { id: 16014, name: 'Mux Manascrambler', level: 60, faction: null, instance: null, roles: [], spawns: [{ map: 1446, x: 52, y: 28, f: 'e' }] };
@@ -153,9 +153,9 @@ test('buildJournal: a stray drop (only Wowhead records it, under 5%) ties no que
 	c.quests[90012] = quest(90012, 'Gears', 90010);
 	c.quests[90013] = quest(90013, 'Plates', 90011);
 	const dm = buildJournal(i, c).dungeons.deadmines.quests.map((q) => q.id);
-	assert.ok(!dm.includes(8921), "the essence a boss drops 1.2% of the time on Wowhead's list ties nothing");
+	assert.ok(!dm.includes(8921), "the essence a boss drops 1.2% of the time on Forever's list ties nothing");
 	assert.ok(dm.includes(90012), 'a drop QuestieDB or pfQuest records does');
-	assert.ok(dm.includes(90013), 'and a common one only Wowhead records');
+	assert.ok(dm.includes(90013), "and a common one only Forever's lists record");
 });
 
 test('buildJournal tolerates missing inputs; emitJournal writes one file of summaries and page sources', () => {

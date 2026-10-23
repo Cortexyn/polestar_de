@@ -19,7 +19,7 @@
 //   Step      { id, type, ref, follows: [step ids], all: bool, stage, count, location,
 //                side, or, level }
 //             type: Level | Pick Up | Quest | Turn In | Item | Kill | Interact | Click | Rep | Attune | End
-//             (Spacer rows are dropped); ref: the Wowhead id the type names (quest, item,
+//             (Spacer rows are dropped); ref: the game id the type names (quest, item,
 //             npc, object, reputation points, level, attunement id) as a number;
 //             follows: the step ids it waits on ("60&30" -> all, "0" -> none);
 //             side: an optional side quest; or: one of several alternatives.
