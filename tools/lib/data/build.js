@@ -19,9 +19,9 @@ const { DEFAULTS: SPAWN_DEFAULTS } = require('./spawns');
 const { readQuestie, REPO: QUESTIEDB_REPO, QUESTIE_REPO } = require('./questie');
 const { applyQuestie } = require('./questie-merge');
 const { loadWebXp, WFT, FC } = require('./webxp');
-const { loadZoneQuests, applyChangeNotes, fillWowheadXp, applyWowheadFacts, BASE: WOWHEAD } = require('./wowhead');
+const { loadZoneQuests, applyChangeNotes, fillWowheadXp, applyWowheadFacts, cacheDir, BASE: WOWHEAD } = require('./wowhead');
 const { loadSpawnHeights, loadQuestCounts, HEIGHTS_SOURCE, COUNTS_SOURCE } = require('../travel/cmangos');
-const { loadCorrections } = require('./corrections');
+const { loadCorrections, loadPrivateCorrections, overlayCorrections } = require('./corrections');
 
 // tools/lib/data/corrections.json (with the private overlay, corrections.js): quests `set` fields; items
 // `removeDrops`/`removeVendors`; npcs/objects `set` fields and `addSpawns` maps. Every corrected record's
@@ -229,7 +229,24 @@ async function buildData(options = {}) {
 		warnings.push(...zl.warnings);
 		wh = { zl, changed: applyChangeNotes(norm.quests, zl.rows), facts: applyWowheadFacts(norm.quests, zl.rows), xpFilled: 0 };
 	}
-	if (qz) qstats.corrections = applyCorrections(norm, loadCorrections({ root, privateFile: options.correctionsPrivate }));
+	// The private corrections overlay (corrections.js): one line saying what it applied, as a warning when
+	// the other private sources (the web quest-list cache, the local knowledge base or fact check) are
+	// here but the overlay is not.
+	const priv = loadPrivateCorrections({ root, privateFile: options.correctionsPrivate });
+	let privateApplied = 0;
+	if (qz) {
+		const pub = loadCorrections({ privateFile: false });
+		qstats.corrections = applyCorrections(norm, priv ? overlayCorrections(pub, priv.data) : pub);
+		if (priv) for (const kind of ['quests', 'npcs', 'objects', 'items']) for (const id of Object.keys(priv.data[kind] || {})) if (norm[kind][id]) privateApplied++;
+	}
+	if (priv) log(`private corrections: ${privateApplied} applied from ${priv.file}`);
+	else {
+		const line = 'private corrections: none found (public corrections only)';
+		const local = path.join(root, 'data', 'local');
+		const others = [cacheDir(sourcesDir), path.join(local, 'kb'), path.join(local, 'factcheck')].some((p) => fs.existsSync(p));
+		if (others && options.correctionsPrivate !== false) warnings.push(line);
+		else log(line);
+	}
 
 	// Quest XP still missing after QuestieDB, from the Forever web databases.
 	let webxp = null;
@@ -389,6 +406,7 @@ async function buildData(options = {}) {
 			recordedInstances: rec.recordedInstances,
 			recordedEncounters: rec.recordedEncounters,
 			spawnCap: spawnOptions.cap,
+			correctionsPrivate: privateApplied,
 			...(qstats
 				? {
 						questieQuests: qstats.questieQuests,

@@ -35,14 +35,20 @@ function overlayCorrections(pub, priv) {
 	return out;
 }
 
-// privateFile: undefined -> <root>/data/local/corrections-private.json when it
-// exists; false -> none; a path -> that file (it must exist).
-function loadCorrections({ root = ROOT, privateFile } = {}) {
-	const pub = JSON.parse(fs.readFileSync(PUBLIC_FILE, 'utf8'));
-	if (privateFile === false) return pub;
+// The private overlay. privateFile: undefined -> <root>/data/local/corrections-private.json
+// when it exists; false -> none; a path -> that file (it must exist). -> { file, data } or null.
+function loadPrivateCorrections({ root = ROOT, privateFile } = {}) {
+	if (privateFile === false) return null;
 	const file = privateFile || path.join(root, PRIVATE_FILE);
-	if (!privateFile && !fs.existsSync(file)) return pub;
-	return overlayCorrections(pub, JSON.parse(fs.readFileSync(file, 'utf8')));
+	if (!privateFile && !fs.existsSync(file)) return null;
+	return { file, data: JSON.parse(fs.readFileSync(file, 'utf8')) };
 }
 
-module.exports = { loadCorrections, overlayCorrections, PUBLIC_FILE, PRIVATE_FILE, SOURCE_KINDS };
+// The public corrections with the private overlay (loadPrivateCorrections) merged over them.
+function loadCorrections(options = {}) {
+	const pub = JSON.parse(fs.readFileSync(PUBLIC_FILE, 'utf8'));
+	const priv = loadPrivateCorrections(options);
+	return priv ? overlayCorrections(pub, priv.data) : pub;
+}
+
+module.exports = { loadCorrections, loadPrivateCorrections, overlayCorrections, PUBLIC_FILE, PRIVATE_FILE, SOURCE_KINDS };

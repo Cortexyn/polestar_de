@@ -5008,7 +5008,12 @@ exclusive group: pfQuest `close` united with QuestieDB `exclusiveTo`.
    support is a source we don't publish lives in the private overlay
    `data/local/corrections-private.json` (same shape, not in the repository),
    which `data build` merges over the public file entry by entry when it is
-   there (`--corrections-private <file>`, `--no-corrections-private`). They are
+   there (`--corrections-private <file>`, `--no-corrections-private`). The
+   build prints `private corrections: N applied from <path>` or `private
+   corrections: none found (public corrections only)`, the latter as a
+   warning when the web quest-list cache or `data/local/kb` or
+   `data/local/factcheck` is present, and records N in `meta.json` counts
+   `correctionsPrivate`. They are
    applied after the merge, only in a build that reads QuestieDB, and the
    record's `source` gains `polestar-correction`. One
    cleanup is general rather than per quest: `pre`, `preAll` and `preAny`

@@ -59,9 +59,12 @@ function parseChangeNotes(lines) {
 	return out;
 }
 
+// The folder of the web quest-list cache under the sources folder.
+const cacheDir = (sourcesDir) => path.join(sourcesDir, 'wowhead');
+
 // The cached zone lists. -> { rows: Map<id, row>, file, fetchedAt, warnings }
 function loadZoneQuests({ sourcesDir }) {
-	const file = path.join(sourcesDir, 'wowhead', 'zones.json');
+	const file = path.join(cacheDir(sourcesDir), 'zones.json');
 	const cache = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 	const rows = new Map();
 	if (cache) for (const [zone, list] of Object.entries(cache.zones)) for (const r of list) rows.set(r.id, r.zone === undefined ? { ...r, zone: Number(zone) } : r);
@@ -140,4 +143,4 @@ function applyWowheadFacts(quests, rows) {
 	return n;
 }
 
-module.exports = { BASE, parseChangeNotes, loadZoneQuests, applyChangeNotes, fillWowheadXp, applyWowheadFacts };
+module.exports = { BASE, cacheDir, parseChangeNotes, loadZoneQuests, applyChangeNotes, fillWowheadXp, applyWowheadFacts };
