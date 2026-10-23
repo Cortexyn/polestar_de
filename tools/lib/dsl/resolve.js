@@ -1784,9 +1784,18 @@ function resolveGoal(g, zoneMap, prev, data, err, warn, ctx = { sides: ['Allianc
 			// SPAWN_CHECK_YARDS away has moved (the lint's own threshold).
 			// Gathering nodes respawn over the zone's whole pool, so a route's
 			// point anywhere in it lists every node place.
-			const known = area ? candidates.filter((s) => s.chance === undefined || s.chance > 0 || gatherNode(data, s)) : [c];
+			// No source with known odds (the data's droppers without a chance):
+			// the droppers that spawn at the author's point, with every place
+			// they spawn; not the other droppers, whose places the author chose
+			// against (the Savannah Lion Hide's Matriarchs by Ratchet, #273).
+			const unknownOdds = area && candidates.length > 0 && candidates.every((s) => s.chance === 0);
+			const known = area ? candidates.filter((s) => s.chance === undefined || s.chance > 0 || unknownOdds || gatherNode(data, s)) : [c];
 			const all = known.map((cand) => ({ cand, spawns: data.spawns(cand.kind, cand.id) }));
-			const sources = onMap(data, all, goal.map, dropSides, passRares, dropLevel).on.map((o) => o.cand);
+			let sources = onMap(data, all, goal.map, dropSides, passRares, dropLevel).on.map((o) => o.cand);
+			if (unknownOdds) {
+				const atPin = new Set(pointSources(data, sources, goal.map, goal.f, goal.x, goal.y, SPREAD_YARDS));
+				sources = sources.filter((s) => gatherNode(data, s) || atPin.has(s));
+			}
 			const near = !area ? SPAWN_CHECK_YARDS : sources.length && sources.every((s) => gatherNode(data, s)) ? Infinity : SPREAD_YARDS;
 			setIf(goal, 'spots', handSpots(data, sources, goal.map, goal.f, goal.x, goal.y, near));
 			if (v === 'collect' && goal.npc === undefined) {
