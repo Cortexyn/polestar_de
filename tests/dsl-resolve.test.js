@@ -305,6 +305,23 @@ test('a hand-placed point stays the spot the arrow takes; the other places the d
 	assert.equal(goals[1].spots, undefined);
 });
 
+test('a hand-placed collect whose droppers all have unknown odds lists the other places of the droppers at its point', () => {
+	// The data gives some quest items' droppers without a chance (null). The pin's own droppers keep
+	// every place they spawn, so a pin at the gnolls' west camp has the east camp and the lone spawn as
+	// alternatives, not one point alone. Baron Testshore, who drops it too but far from the pin, is
+	// not marked: the author chose the gnolls (the Savannah Lion Hide by Ratchet, #273).
+	const base = fixtureData();
+	const items = { ...base.items, 95130: { id: 95130, name: 'Gnoll Note', drops: { npc: { 95021: null, 95023: null }, object: {} }, vendors: [] } };
+	const data = new Data({ quests: base.quests, npcs: base.npcs, objects: base.objects, items, zones: base.zones, 'map-frames': base.mapFrames, meta: base.meta }, { dir: base.dir });
+	const goal = (line) => {
+		const r = compile(guideText(['step One', line]), data);
+		assert.deepEqual(r.errors, [], r.text);
+		return plain(r.guides[0].steps[0].goals[0]);
+	};
+	const pinned = goal('  collect 95130 x3 @40,70');
+	assert.deepEqual(pinned.spots && pinned.spots.map((s) => [s.x, s.y, !!s.alt]), [[40, 70, false], [42, 74, true], [44.1, 70, true]]);
+});
+
 test('an NPC to talk to, accept from or hand in to that stands at several places gets every one', () => {
 	const g = goalsOf(['step One', '  talk 95023']).goals[0];
 	assert.deepEqual(outsideSpots(g, 'npc', 95023), []);
