@@ -8,18 +8,19 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
 const { tmpdir } = require('./helpers/tmp');
-const { readTexts, luaFiles, nameIndex, treeIndex, auditTexts } = require('../tools/lib/i18n/audit');
+const { spawnSync } = require('node:child_process');
+const { readTexts, luaFiles, nameIndex, treeIndex, auditTexts, formatTable } = require('../tools/lib/i18n/audit');
 const { loadAuditNames } = require('../tools/lib/i18n/names-wago');
 
 const m = (o) => new Map(Object.entries(o).map(([k, v]) => [Number(k), v]));
 const english = {
-	spell: m({ 1: 'Mortal Strike', 2: 'Fire', 3: 'Holy Shock', 4: 'Smite', 5: 'Ratchet Bolt' }),
+	spell: m({ 1: 'Mortal Strike', 2: 'Fire', 3: 'Holy Shock', 4: 'Smite', 5: 'Ratchet Bolt', 6: 'Holy Specialization' }),
 	area: m({ 10: 'Deeprun Tram', 11: 'Ratchet Docks' }),
 	skill: m({ 20: 'Subtlety', 21: 'Holy', 22: 'Shadow Magic', 23: 'Feral Combat', 24: 'Pet - Wolf' }),
 	tree: m({ 20: 'Subtlety', 21: 'Holy', 22: 'Shadow Magic', 23: 'Feral Combat', 24: 'Pet - Wolf' }),
 };
 const names = {
-	spell: m({ 1: 'Tödlicher Stoß', 2: 'Feuer', 3: 'Heiliger Schock', 4: 'Göttliche Pein', 5: 'Ratchet Bolt' }),
+	spell: m({ 1: 'Tödlicher Stoß', 2: 'Feuer', 3: 'Heiliger Schock', 4: 'Göttliche Pein', 5: 'Ratchet Bolt', 6: 'Heiligspezialisierung' }),
 	area: m({ 10: 'Die Tiefenbahn', 11: 'Ratchet Docks' }),
 	skill: m({ 20: 'Feingefühl', 21: 'Heilig', 22: 'Schattenmagie', 23: 'Wilder Kampf', 24: 'Tier - Wolf' }),
 	tree: m({ 20: 'Feingefühl', 21: 'Heilig', 22: 'Schattenmagie', 23: 'Wilder Kampf', 24: 'Tier - Wolf' }),
@@ -33,6 +34,31 @@ test('a name of several words must stand in the translation, in any case and wit
 	assert.equal(audit('Use Holy Shock on the boss', 'Nutze den Heiligen Schock beim Boss').length, 0, 'inflected: Heiliger -> Heiligen');
 	const [row] = audit('Use Mortal Strike on the boss', 'Benutze Mortal Strike beim Boss');
 	assert.deepEqual({ kind: row.kind, en: row.en, client: row.client, file: row.file, line: row.line }, { kind: 'spell', en: 'Mortal Strike', client: ['Tödlicher Stoß'], file: 'f.lua', line: 7 });
+});
+
+test('hyphens and spaces of the translation do not matter: a compound the client writes in one word may be hyphenated', () => {
+	assert.equal(audit('Holy Specialization first', 'Zuerst Heiligspezialisierung').length, 0);
+	assert.equal(audit('Holy Specialization first', 'Zuerst Heilig-Spezialisierung').length, 0);
+	assert.equal(audit('Holy Specialization first', 'Zuerst Heilig Spezialisierung').length, 0);
+	assert.equal(audit('Holy Specialization first', 'Zuerst Göttliche Fertigkeit').length, 1);
+});
+
+test('names of a language with no spaces: a name of four characters or fewer is needed whole, a longer one by its first four', () => {
+	const zh = nameIndex({ english: { spell: m({ 1: 'Flame Shock', 2: "Templar's Bulwark" }) }, names: { spell: m({ 1: '烈焰震击', 2: '圣殿骑士壁垒' }) } });
+	const run = (en, tr) => auditTexts({ texts: [{ file: 'zh.lua', line: 1, en, tr }], index: zh });
+	assert.equal(run('Use Flame Shock on it', '对它使用烈焰震击').length, 0);
+	assert.equal(run('Use Flame Shock on it', '对它使用火焰冲击').length, 1);
+	assert.equal(run("Templar's Bulwark is an absorb", '圣殿骑士壁垒是吸收').length, 0);
+	assert.equal(run("Templar's Bulwark is an absorb", '圣殿壁垒是吸收').length, 1, 'the first four characters 圣殿骑士 are missing');
+});
+
+test('the findings are a table: a header, aligned columns, the English text cut at 60 characters', () => {
+	const rows = [{ kind: 'spell', en: 'Mortal Strike', client: ['Tödlicher Stoß', 'Stoß'], file: 'a.lua', line: 7, text: 'x'.repeat(80), tr: 'y' }, { kind: 'area', en: 'Elwynn', client: ['Elwynn'], file: 'b.lua', line: 12, text: 'Short', tr: 'y' }];
+	const lines = formatTable(rows);
+	assert.equal(lines.length, 3);
+	assert.match(lines[0], /^ {2}kind +English name +client name +file:line +English text$/);
+	assert.match(lines[1], /^ {2}spell +Mortal Strike +Tödlicher Stoß \| Stoß +a\.lua:7 +x{59}…$/);
+	assert.equal(lines[1].indexOf('a.lua:7'), lines[2].indexOf('b.lua:12'), 'the columns line up');
 });
 
 test('a leading article of the client\'s name is not needed in the text', () => {
@@ -117,4 +143,24 @@ test('the client tables come from the cache: the newest build holding every tabl
 	assert.deepEqual([...got.names.deDE.tree.keys()], [1], 'the trees: the skill lines of category 7');
 	assert.equal(got.english.area.get(1), 'AreaTable 1 en');
 	await assert.rejects(loadAuditNames({ sourcesDir, locales: ['frFR'], offline: true }), /no forever client tables/);
+});
+
+test('the command: no finding is exit 0 with a JSON document, no client tables is exit 1 with the reason', () => {
+	const sourcesDir = tmpdir('polestar-audit-cli-');
+	const FIELD = { SpellName: 'Name_lang', AreaTable: 'AreaName_lang', SkillLine: 'DisplayName_lang' };
+	for (const locale of [null, 'deDE']) {
+		const dir = path.join(sourcesDir, 'wago', '1.60.1.1', ...(locale ? [locale] : []));
+		fs.mkdirSync(dir, { recursive: true });
+		for (const [t, f] of Object.entries(FIELD)) fs.writeFileSync(path.join(dir, `${t}.csv`), `ID,${f},CategoryID\n1,Zzyzx Qwerty Name ${locale || 'en'},7\n`);
+	}
+	const run = (...args) => spawnSync(process.execPath, [path.join(__dirname, '..', 'tools', 'polestar.js'), 'i18n', 'audit', ...args, '--offline', '--sources', sourcesDir], { encoding: 'utf8' });
+	const ok = run('deDE', '--json', '--build', '1.60.1.1');
+	assert.equal(ok.status, 0, ok.stderr);
+	const doc = JSON.parse(ok.stdout);
+	assert.equal(doc.build, '1.60.1.1');
+	assert.deepEqual(doc.findings, []);
+	assert.ok(doc.checked.deDE.texts > 1000, 'the shipped German texts were read');
+	const none = run('frFR');
+	assert.equal(none.status, 1);
+	assert.match(none.stderr, /no forever client tables/);
 });

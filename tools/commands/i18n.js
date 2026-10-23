@@ -499,9 +499,8 @@ async function runNames(opts, positional) {
 	return 0;
 }
 
-// Every locale (or those named, each with the file standing in for its
-// shipped one) laid out in every preview scene and Options page: the
-// translated text that does not fit (tools/preview/fit.js).
+// `i18n audit`: the translations against the client's own names
+// (tools/lib/i18n/audit.js); exit 1 when any text lacks one.
 async function runAudit(opts, positional) {
 	const A = require('../lib/i18n/audit');
 	const { loadAuditNames } = require('../lib/i18n/names-wago');
@@ -534,14 +533,14 @@ async function runAudit(opts, positional) {
 		if (!c.texts) continue;
 		console.log(`\n${locale}: ${plural(c.texts, 'translated text')} against ${plural(c.names, 'client name')}: ${mine.length ? plural(mine.length, 'text') + ' without the client\'s name' : 'all carry the client\'s names'}`);
 		if (!mine.length) continue;
-		const cut = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
-		const table = [['kind', 'English name', 'client name', 'file:line', 'English text'], ...mine.map((r) => [r.kind, r.en, r.client.join(' | '), `${r.file}:${r.line}`, cut(r.text.replace(/\s+/g, ' '), 60)])];
-		const width = table[0].map((_, c) => Math.max(...table.map((row) => [...row[c]].length)));
-		for (const row of table) console.log(`  ${row.map((cell, c) => (c === row.length - 1 ? cell : cell + ' '.repeat(width[c] - [...cell].length))).join('  ')}`);
+		for (const line of A.formatTable(mine)) console.log(line);
 	}
 	return rows.length ? 1 : 0;
 }
 
+// Every locale (or those named, each with the file standing in for its
+// shipped one) laid out in every preview scene and Options page: the
+// translated text that does not fit (tools/preview/fit.js).
 async function runFit(opts, positional) {
 	const { fitLocales, describe } = require('../preview/fit');
 	const slack = opts.slack === undefined ? 1 : Number(opts.slack);

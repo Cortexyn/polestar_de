@@ -60,9 +60,12 @@ const stems = (name) => {
 	if (words.length > 1 && ARTICLES.has(words[0])) words.shift();
 	return words.map((w) => (w.length > 4 ? w.slice(0, Math.max(4, w.length - 3)) : w));
 };
-// The client's name in the text, word by word.
+// The client's name in the text, word by word. Hyphens and spaces of the text
+// are left out first, so "Heilig-Spezialisierung" carries "Heiligspezialisierung".
+// A stem is not word-bounded: "Feuer" is also in "Feuerball". That is the price
+// of letting the endings change.
 const carries = (tr, name) => {
-	const text = tr.toLowerCase();
+	const text = tr.toLowerCase().replace(/[\s-]+/g, '');
 	return stems(name).every((w) => text.includes(w));
 };
 
@@ -154,4 +157,13 @@ function auditTexts({ texts, index, trees = new Map() }) {
 	return rows;
 }
 
-module.exports = { readTexts, luaFiles, nameIndex, treeIndex, auditTexts };
+// Findings -> the lines of their table: kind, English name, the client's
+// name(s), file:line, the English text cut at 60 characters.
+function formatTable(rows) {
+	const cut = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+	const table = [['kind', 'English name', 'client name', 'file:line', 'English text'], ...rows.map((r) => [r.kind, r.en, r.client.join(' | '), `${r.file}:${r.line}`, cut(r.text.replace(/\s+/g, ' '), 60)])];
+	const width = table[0].map((_, c) => Math.max(...table.map((row) => [...row[c]].length)));
+	return table.map((row) => `  ${row.map((cell, c) => (c === row.length - 1 ? cell : cell + ' '.repeat(width[c] - [...cell].length))).join('  ')}`);
+}
+
+module.exports = { readTexts, luaFiles, nameIndex, treeIndex, auditTexts, formatTable };

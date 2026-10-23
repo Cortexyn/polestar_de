@@ -135,11 +135,14 @@ for your language from
   name. It reads the interface files and the guide texts, changes nothing, and
   prints each finding with its file and line; exit 1 when there is any. A
   name of one word (Fire, Shadow) counts only as a whole text, never inside a
-  sentence; a name of several words counts wherever it stands, and its endings
-  may change. A talent tree is also asked for by the first words of its name
-  (the addon's "Shadow" is the client's "Shadow Magic"). A finding is a question, not an error: the client names the spell
-  and a text may mean the NPC or faction of the same name. `--offline` uses
-  the cached tables, `--build` a build, `--json` prints one document.
+  sentence; a name of several words counts wherever it stands. Its endings may
+  change and hyphens and spaces do not matter ("Heilig-Spezialisierung" carries
+  "Heiligspezialisierung"); the check is loose by design, so "Feuer" is also
+  found in "Feuerball". A talent tree is also asked for by the first words of
+  its name (the addon's "Shadow" is the client's "Shadow Magic"). A finding is
+  a question, not an error: the client names the spell and a text may mean the
+  NPC or faction of the same name. `--offline` uses the cached tables,
+  `--build` a build, `--json` prints one document.
 
 ## For developers
 
