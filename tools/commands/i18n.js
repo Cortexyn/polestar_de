@@ -425,7 +425,7 @@ async function runNames(opts, positional) {
 		for (const [id, r] of Object.entries(JSON.parse(fs.readFileSync(f, 'utf8')))) names.addEnglish(english, kind, Number(id), r && (r.name || r.title));
 	}
 
-	// Wowhead: only what is already cached.
+	// Web names: only what is already cached.
 	const whNames = Object.fromEntries(wanted.map((l) => [l, wh.loadWowheadNames(sourcesDir, l)]));
 	const out = names.buildNames({ locales: wanted, ids, ding: dingNames, pf, wago, wowhead: whNames, english });
 	for (const l of wanted) {

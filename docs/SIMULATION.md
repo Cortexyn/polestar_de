@@ -709,9 +709,9 @@ column; `--guides` with the guides of tag v0.1.0 for the middle one):
   Hyjal, the rest of the Wetlands expansion): the beta caps at 30 and the
   data has none of it. Results are "Era + known Forever quests".
 - **Forever NPC ranks**: QuestieDB's Forever store gives every Forever NPC
-  rank 0; the corrections carry Wowhead Forever's ranks for the 305 Forever
+  rank 0; the corrections carry Forever's quest data ranks for the 305 Forever
   NPCs that quests need, and every quest NPC (4,432) was checked against
-  Wowhead Forever on 2026-10-13 (22 Era NPCs Forever reclassified, e.g.
+  Forever's quest data on 2026-10-13 (22 Era NPCs Forever reclassified, e.g.
   Bruuz now elite).
 - **Quest types are derived**: the client's QuestInfo names Elite, PvP,
   Raid and Dungeon, but which quest has which type (and suggested group

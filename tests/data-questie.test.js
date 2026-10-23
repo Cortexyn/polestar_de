@@ -298,7 +298,7 @@ describe('QuestieDB decoder', () => {
 		assert.deepEqual([...qz.eraToForever.uiMapToArea], [[1453, 1519]]);
 		assert.deepEqual(qz.eraToForever.dbc, { from: '1.15.9.1', to: '1.60.1.2' });
 		assert.deepEqual(qz.info.questie, { title: 'Questie', version: '8.8.8', author: 'Fixture Questie Authors', buildCommit: 'def456', buildTime: null });
-		// DropDB.GetItemDroprate order: correction (a reference falls through when missing), pserver, wowhead.
+		// DropDB.GetItemDroprate order: correction (a reference falls through when missing), pserver, the web database.
 		assert.deepEqual(dropRate(qz.drops, 50, 3), { chance: 12.5, source: 'wowhead' });
 		assert.deepEqual(dropRate(qz.drops, 50, 4), { chance: 70, source: 'cmangos' });
 		assert.deepEqual(dropRate(qz.drops, 252665, 251361), { chance: 100, source: 'questie' });

@@ -77,9 +77,9 @@ run.
 ## 4. Check the sources and give a verdict
 
 Sources that count: the game's own data (`data/forever/*.json`, built from
-the client and pfQuest), Wowhead's Forever database, Polestar Recorder
+the client and pfQuest), Forever's quest data, Polestar Recorder
 recordings, and what a maintainer saw in the game. Sources that don't
-count: Classic Wowhead, Classic guides, memory, and your own training data.
+count: the classic quest data, Classic guides, memory, and your own training data.
 
 Give one verdict:
 

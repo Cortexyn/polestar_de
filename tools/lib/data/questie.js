@@ -439,7 +439,7 @@ function loadSupport(dir) {
 }
 
 // DropDB.GetItemDroprate: manual correction (or the source it references),
-// then private-server data, then Wowhead. -> { chance, source } | null
+// then private-server data, then the web database. -> { chance, source } | null
 function dropRate(drops, itemId, npcId) {
 	const c = drops.corrections.get(itemId);
 	const fromTable = (t) => {

@@ -9,7 +9,7 @@
 //
 // journal: data/forever/codex/journal.json; attune: readAttune(); quests: the
 // Codex quests (data/forever/codex/quests.json); forever: data/forever
-// quests.json (QuestieDB facts and Wowhead's `wowhead` rows); build: the
+// quests.json (QuestieDB facts and Forever's `wowhead` rows); build: the
 // client build the Codex was built from.
 //
 // rows: one per Attune dungeon group and side: { name, faction, key, attune,
@@ -34,15 +34,15 @@ const SIDE = { Alliance: 'A', Horde: 'H' };
 // What the audit found for the quests Attune lists that the journal leaves
 // out on purpose (each checked on its public source, 2026-10-15).
 const VERDICTS = {
-	96403: 'Wowhead Forever quest=96403 says Side: Alliance (its list row side 1; one comment, 2026-09-24, says the beta let both sides take it); QuestieDB has an Alliance race mask',
-	469: 'Attune puts it before Highland Hides; a Wowhead Forever comment on quest=98815 (2026-10-02) says Daily Delivery is not needed (Young Crocolisk Skins is)',
+	96403: "Forever's quest data (quest 96403) says Side: Alliance (its list row side 1; one player's report, 2026-09-24, says the beta let both sides take it); QuestieDB has an Alliance race mask",
+	469: 'Attune puts it before Highland Hides; a player\'s report on quest 98815 (2026-10-02) says Daily Delivery is not needed (Young Crocolisk Skins is)',
 	5342: "the Barov story's follow-up outside: kill the other side's Barov heir; nothing of it is in Scholomance",
 	5344: "the Barov story's follow-up outside: kill the other side's Barov heir; nothing of it is in Scholomance",
-	5961: 'Sylvanas sends you to Nathanos Blightcaller; no source names it a prerequisite of his errands (QuestieDB, Wowhead Forever quest=5961 and quest=6022)',
-	6144: 'Attune puts it before Ramstein; QuestieDB opens both with Duskwing and The Corpulent One (preAll 6135, 6136), and its chain goes on outdoors (The Crimson Courier, an Eastern Plaguelands NPC per Wowhead Forever npc=12337)',
+	5961: 'Sylvanas sends you to Nathanos Blightcaller; no source names it a prerequisite of his errands (QuestieDB, Forever\'s quest data for quests 5961 and 6022)',
+	6144: 'Attune puts it before Ramstein; QuestieDB opens both with Duskwing and The Corpulent One (preAll 6135, 6136), and its chain goes on outdoors (The Crimson Courier, an Eastern Plaguelands NPC per Forever\'s NPC data, npc 12337)',
 };
 const QUEST_STEPS = new Set(['Pick Up', 'Quest', 'Turn In']);
-// Wowhead's quest types.
+// Forever's quest types.
 const DUNGEON = 81;
 const RAID = 62;
 
@@ -117,7 +117,7 @@ function auditDungeonQuests({ journal = {}, attune = {}, quests = {}, forever = 
 		rows.push(row);
 	}
 
-	// Rewards: every journal quest's items against Wowhead's list row and Attune's table.
+	// Rewards: every journal quest's items against Forever's list row and Attune's table.
 	const rewards = { checked: 0, match: 0, differ: [] };
 	for (const [key, p] of Object.entries(pages)) {
 		for (const q of p.quests) {

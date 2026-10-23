@@ -64,8 +64,8 @@ report goes through the same steps before anything changes:
 2. **Reproduce it.** In the data (`data/forever/*.json`, the compiled guide),
    in the test client (`tests/`, see tests/README.md) or in the game. A
    report that can't be reproduced gets an answer saying so, and why.
-3. **Check it against the sources.** The game's own data, Wowhead's Forever
-   database, recordings. A player's memory of Classic is not a source: Forever
+3. **Check it against the sources.** The game's own data, Forever's quest
+   data, recordings. A player's memory of Classic is not a source: Forever
    changed many quests.
 4. **Fix it only if it is real,** with a test that fails before the fix and
    passes after it (or, for a guide, lint and `playtest`).

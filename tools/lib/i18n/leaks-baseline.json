@@ -4,7 +4,7 @@
 		"A new English text fails; so does an entry whose scenes all ran in its locale, with the Codex and quest database built, without it showing (fixed: remove it). `i18n leaks --update-baseline` adds what the run found and drops the stale entries; it never takes English from the code or an untranslated string or guide text."
 	],
 	"reasons": {
-		"no-source": "no source of `i18n names` (the client tables, the Wowhead cache, DingDB, pfQuest) names it in this language: mostly Forever's own NPCs, objects and items; the client shows its own name once the player has seen it (Names.Learn)",
+		"no-source": "no source of `i18n names` (the client tables, the web names cache, DingDB, pfQuest) names it in this language: mostly Forever's own NPCs, objects and items; the client shows its own name once the player has seen it (Names.Learn)",
 		"same-as-english": "every source names it in this language as in English (a Latin-script client keeps the name): the English is the client's name, and the names addon does not store it",
 		"kept-english": "a translation writes these words as the English does: mostly the names of Forever-only places and items no client names otherwise; a translator can still translate them"
 	},

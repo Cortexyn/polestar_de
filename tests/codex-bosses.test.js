@@ -1,6 +1,6 @@
 'use strict';
 // The Codex's bosses beyond the client's encounters (tools/lib/codex/instances.js):
-// NPCs and chests tied to their instance by Wowhead's `location` (an area on
+// NPCs and chests tied to their instance by Forever's `location` (an area on
 // the instance's map) or npcs.json / objects.json `instances`, with their
 // role (rare, event, optional); an encounter naming no NPC taking its chest;
 // the boss shape { name, npc, items, object?, role? } through the pack
@@ -37,7 +37,7 @@ function ctx() {
 		npcs: {
 			9025: { id: 9025, name: 'Lord Roccor', level: 51, rank: 1, spawns: {}, instances: [230] },
 			9476: { id: 9476, name: 'Watchman Doomgrip', level: 55, rank: 1, spawns: {}, instances: [230] },
-			// No static spawn in QuestieDB or pfQuest: Wowhead alone places it (an event).
+			// No static spawn in QuestieDB or pfQuest: Forever's NPC data alone places it (an event).
 			9027: { id: 9027, name: 'Gorosh the Dervish', level: 56, rank: 1, spawns: {} },
 			8923: { id: 8923, name: 'Panzor the Invincible', level: 57, rank: 4, spawns: {}, instances: [230] },
 			8900: { id: 8900, name: 'Doomforge Arcanasmith', level: 52, rank: 1, spawns: {}, instances: [230] },
@@ -74,7 +74,7 @@ function ctx() {
 				8901: { id: 8901, name: 'Anvilrage Reservist', classification: 'elite', boss: false, location: [1584], spawns: {}, drops: [] },
 				// Placed somewhere that is no instance of ours.
 				9028: { id: 9028, name: 'Grizzle', boss: true, location: [25], spawns: {}, drops: [] },
-				// Known to Wowhead only.
+				// Known to Forever's NPC data only.
 				16059: { id: 16059, name: 'Theldren', level: [60, 60], classification: 'elite', boss: true, location: [1584], spawns: {}, drops: [] },
 			},
 			object: { 169243: { id: 169243, name: 'Chest of The Seven', location: [1584], spawns: {}, drops: [] } },
@@ -82,7 +82,7 @@ function ctx() {
 	};
 }
 
-test('buildInstances: Wowhead location ties NPCs and chests to the instance; bosses after the encounters carry their role; an NPC-less encounter takes its chest', () => {
+test('buildInstances: Forever\'s location ties NPCs and chests to the instance; bosses after the encounters carry their role; an NPC-less encounter takes its chest', () => {
 	const facts = instanceFacts(TABLES, [{ ID: '230' }]);
 	const { instances, bossInstance, npcInstance } = buildInstances(facts, ctx());
 	const brd = instances['blackrock-depths'];
@@ -96,11 +96,11 @@ test('buildInstances: Wowhead location ties NPCs and chests to the instance; bos
 		{ name: 'Theldren', npc: 16059, items: [], role: 'event' },
 		{ name: 'Dark Coffer', npc: null, items: [11945, 11946], object: 160845, role: 'optional' },
 	]);
-	assert.equal(brd.levels[2], 60, "the highest boss level, Wowhead's for an NPC only it knows");
+	assert.equal(brd.levels[2], 60, "the highest boss level, Forever's for an NPC only it knows");
 	assert.equal(bossInstance[9027], 'blackrock-depths');
 	assert.equal(bossInstance[16059], 'blackrock-depths');
-	assert.equal(bossInstance[9028], undefined, 'Wowhead places Grizzle elsewhere');
-	assert.equal(npcInstance[8901], 'blackrock-depths', 'an NPC Wowhead places inside belongs to the instance');
+	assert.equal(bossInstance[9028], undefined, "Forever's data places Grizzle elsewhere");
+	assert.equal(npcInstance[8901], 'blackrock-depths', "an NPC Forever's data places inside belongs to the instance");
 	assert.equal(bossInstance[8901], undefined, 'neither ranked, flagged nor with loot of its own: no boss');
 	assert.equal(npcInstance[8900], 'blackrock-depths');
 });
@@ -240,5 +240,5 @@ test('compareCodex: a chest boss matches by its object name; a confirmed missing
 	const why = Object.fromEntries(b.missing.map((m) => [m.id, m.reason]));
 	assert.equal(why['blackrock-depths/6231'], "Forever's sources place it outside the instance (map 1415)");
 	assert.match(why['blackrock-depths/3864'], /^Wowhead Forever ranks it an ordinary elite NPC/);
-	assert.equal(why['blackrock-depths/10339'], undefined, 'Wowhead flags Gyth a boss inside: a real gap');
+	assert.equal(why['blackrock-depths/10339'], undefined, "Forever's data flags Gyth a boss inside: a real gap");
 });

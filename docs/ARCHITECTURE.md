@@ -487,8 +487,8 @@ Names.Add(locale, kind, { [id] = name })   -- the pack's files only; any kind
   tables in that language (wago.tools with `&locale=`: Forever's ItemSparse,
   Map, DungeonEncounter, Faction and TaxiNodes, then the Era client's
   ItemSparse for the items Forever's lacks; the newest build holding every
-  one in English and each language, and none stops the build), Wowhead's
-  Forever database in that language (read from `data/sources/wowhead/names`;
+  one in English and each language, and none stops the build), Forever's
+  quest data in that language (read from `data/sources/wowhead/names`;
   without that cache this source is empty; a bracketed name is no translation), DingDB (cloned into
   `data/sources/ding`, pinned to a commit and its files' sha256s: `DING` in
   `tools/lib/i18n/names.js`), then pfQuest's `db/<locale>` (no esMX). A name
@@ -3592,7 +3592,7 @@ as Lua source compiled only when opened): the quests QuestieDB files under the
 instance's areas (the areas on the instance's map and the outdoor areas of its
 name, as the solo filter's instance classification reads them,
 `tools/lib/sim/solo.js`), whose objectives or starting item point into it,
-that Wowhead Forever's dungeon and raid quest lists place in it (`quests.json`'s
+that Forever's dungeon and raid quest lists place in it (`quests.json`'s
 `wowhead.zone`, counted only when QuestieDB's Forever store has the quest,
 which keeps out `<UNUSED>`, `<NYI>` and retired quests), whose start item drops
 or lies inside one instance (that page too, even when the quest has an area),
@@ -3601,10 +3601,10 @@ where the quest ends: Hidden Enemies, The Lord of Blackrock); plus, with
 `--local-extras`, `dungeons.json`'s. An objective item that is sold, crafted,
 or dropped or held outside every instance ties no quest to a dungeon (the
 false-positive rule: Murloc Poachers, Craftsman's Writs), nor does a stray
-drop, one only Wowhead's lists record and under 5% (The Ectoplasmic
+drop, one only the web lists record and under 5% (The Ectoplasmic
 Distiller's Greater Eternal Essence from Gri'lek and Maexxna); a quest of a
 game event (pfQuest's `event`: the Darkmoon Faire, the holidays, the war
-efforts) is on a page only where QuestieDB or Wowhead files it (Copper
+efforts) is on a page only where QuestieDB or Forever's quest data files it (Copper
 Modulator, Rinling's Faire turn-in, is on none). What no rule can catch is
 in the cited table `tools/lib/codex/journal-quests.json` (Shards of the
 Felvine). Each quest has giver and ender and their positions, its objective
@@ -3616,8 +3616,8 @@ objective line in the client's language (`Dungeons.ObjectiveText`:
 the names pack, kind `objective`), chain (every prerequisite and breadcrumb of the quest's side,
 all of `pre` and `preAny`, oldest first, at most 20), rewards (items with
 quality, count and choice from recordings and ForeverLevelingBiS, else
-Wowhead's list rewards, choice versus fixed as Wowhead files them; XP from
-`quests.json`; money, else Wowhead's; reputation from Wowhead's rewards, its
+the quest list's rewards, choice versus fixed as the list files them; XP from
+`quests.json`; money, else the list's; reputation from the list's rewards, its
 "+1" placeholders left out, never the standing a quest asks for) and, with
 `--local-extras`, DungeonJournal's audited shareability; bosses in kill order
 with the quests tied to them (an encounter's boss carries its DungeonEncounter
@@ -4532,7 +4532,7 @@ registers through `ZoneArt.RegisterOverlays` the way `MapFrames.lua` and
 
 `node tools/polestar.js codex build [--addons <dir>] [--build <version>] [--offline] [--out <dir>] [--local-extras]`
 merges `data/forever/*.json` (pfQuest, QuestieDB facts, recordings,
-corrections, Wowhead and web XP facts), the Forever client's tables
+corrections, web quest list and web XP facts), the Forever client's tables
 (wago.tools, cached under `data/sources/wago/<build>/`: the newest 1.60+
 `wow_classic_beta` build wago.tools lists, as `data build` picks its
 `--forever-build` (`pickBuild` in `tools/lib/data/wago.js`); `--build`
@@ -4588,9 +4588,9 @@ built.
   encounters name both; an encounter naming no NPC takes the chest placed
   inside whose name ends with its name, The Seven: Chest of The Seven). A
   boss's loot (at most 30 items) is its own table first: its `items.json`
-  drops at 1% or more or at an unknown rate, and its Wowhead drops outside
+  drops at 1% or more or at an unknown rate, and its web database drops outside
   the world-drop pool at any rate (Thermaplugg's schematics, Dextren Ward's
-  plans); then Wowhead's `commondrop` rows (world books, world blues) at 1%
+  plans); then the web database's `commondrop` rows (world books, world blues) at 1%
   or more, so those no longer crowd out a boss's own loot (Onyxia's Sacks
   of Gems); each part best chance first. The entrance (`chooseEntrance`): a recorded one
   (Recorder `enter`, `data/forever/instances.json`), else the curated table
@@ -4598,7 +4598,7 @@ built.
   map where one walks in, `{ key, instance, map, x, y, source, note }`, each
   with its public source, checked against the corpse point and our guides'
   gotos; every dungeon and raid in the Codex, Forever's own included, from
-  QuestieDB's Forever dungeon table, warcraft.wiki.gg and Wowhead Forever),
+  QuestieDB's Forever dungeon table, warcraft.wiki.gg and Forever's quest data),
   else a guide's `goto x,y "<instance name> ..."`, else the `Map` Corpse
   point (where a ghost comes back: near the way in, not at it; the
   Deadmines' is the portal deep in the Moonbrook mine, 200 yd from the
@@ -4608,15 +4608,15 @@ built.
   and the trigger nearest a Corpse point is as often an inn or city trigger,
   so they are not used. Every
   NPC placed in an instance (`npcs.json` `instances`, from QuestieDB and
-  recordings, or Wowhead's `location` naming an `AreaTable` area of the
+  recordings, or the web database's `location` naming an `AreaTable` area of the
   instance's map) belongs to it: its drops carry the instance. An instance's
   boss or mob the data ranks rare is not a rare unless RareScanner lists it.
   `--local-extras` takes the instances from AtlasLoot and `dungeons.json`
   instead.
-- Wowhead Forever per entity (`tools/lib/codex/wowhead.js`, release build
-  only, lowest precedence). `codex build` reads the Wowhead Forever facts
+- Forever's web data per entity (`tools/lib/codex/wowhead.js`, release build
+  only, lowest precedence). `codex build` reads the Forever web facts
   cached under `data/sources/wowhead/codex/`, and builds without them when
-  there are none. The cache holds Wowhead's NPC, object
+  there are none. The cache holds the NPC, object
   and item list rows by id range (`lists/<type>.json`: id, name, levels,
   classification, boss flag, `location` and `envChange`, how Forever differs
   from Classic) and each fetched entity's facts
@@ -4625,13 +4625,13 @@ built.
   one (286 NPCs); a row's rank, boss flag and place are no page's, so rares,
   bosses and parity's verdicts read only pages. From the pages: an NPC's
   level, rare rank and spawns where ours lack them (and the rares only
-  Wowhead places), drops and object contents with chance = looted count /
+  the web data places), drops and object contents with chance = looted count /
   looted kills, an NPC's or object's `location` (the areas its page entry
-  names) and Wowhead's boss flag, and the reputation ("Requires <Faction> -
+  names) and the web data's boss flag, and the reputation ("Requires <Faction> -
   <Standing>") and PvP rank ("(Rank N)") an item's Forever tooltip asks for.
   An instance also lists, after
   its encounters and by level, the NPCs placed inside that the data or
-  Wowhead ranks rare or boss (or flags boss), or that alone drop an item of
+  the web data ranks rare or boss (or flags boss), or that alone drop an item of
   quality 2 or better at 5% or more, each with a `role`: `rare` (ranked
   rare), `event` (pfQuest and QuestieDB know no static spawn: summoned or
   scripted, the Ring of Law's fighters, the Tier 0.5 summons), else
@@ -4647,8 +4647,8 @@ built.
   the cited table `tools/lib/codex/attunements.json` names per Codex instance
   each attunement's goal only (the quests that end it, one of them with
   `any`, or the key item), whether everyone entering needs it or one in the
-  group, and our one-line note, each entry with its public sources (Wowhead
-  Forever, warcraft.wiki.gg). The steps come from the Codex: every
+  group, and our one-line note, each entry with its public sources (Forever's
+  quest data, warcraft.wiki.gg). The steps come from the Codex: every
   prerequisite of a goal (all of `pre`, the `preAny` of the entry's side),
   oldest first, each with `after`/`afterAny`; a quest only an item starts
   gets that item's drops before it (Blackhand's Command from the Scarshield
@@ -4659,7 +4659,7 @@ built.
   Streets after Dalaran Patrols and Key to the City, Heart of Disruption
   after it). `inside` places an NPC or object of a chain that has no
   open-world spawn and no Codex instance in the instance it is in, each with
-  its Wowhead Forever page (Marshal Windsor, the Monument of Franclorn
+  its Forever quest data entry (Marshal Windsor, the Monument of Franclorn
   Forgewright and the Core Fragment in Blackrock Depths; the Inconspicuous
   Documents and Drakkisath's Brand in Blackrock Spire; Doan's Strongbox in
   Scarlet Monastery); each attunement carries the entries its steps meet as
@@ -4690,7 +4690,7 @@ built.
   naming it, its own first (items no other NPC or object drops or holds:
   Bayne's Bite, Serrated Shadowclaw), then best chance first, at most 150 (a
   rare's candidates run to hundreds, median 286; 150 keeps every drop the
-  internal build names that Wowhead Forever confirms, for about 215 KB of
+  internal build names that Forever's web data confirms, for about 215 KB of
   pack). An item keeps its 10 likeliest droppers (6 objects, 10 vendors) plus
   the drops of its instances' bosses.
 - Precedence for a fact found in several places follows `docs/SUITE.md`;
@@ -4706,7 +4706,7 @@ built.
   (with `pre` = every blocking prerequisite, `preAny`, rewards from recordings
   and ForeverLevelingBiS, `xp` = the full XP reward from `data/forever/quests.json`
   where known (what a guide or dungeon is worth in levels: Core/Levels.lua),
-  and `wowhead` on each quest Wowhead Forever's zone,
+  and `wowhead` on each quest Forever's zone,
   dungeon and raid lists carry: `{ zone, type, side, choices, items, money,
   rep }`, the zone or instance category and the list's rewards, read by the
   journal), `instances.json`, `zones.json`, `factions.json`,
@@ -4734,9 +4734,9 @@ built.
   merge's `evidence.cut`, not shipped) says so ("cut by a cap") and is
   counted on its own line. A chest boss matches the internal row named after
   its object (Chest of The Seven); a confirmed missing boss that Forever's
-  sources place outside every instance (Wowhead `location` or spawns off the
+  sources place outside every instance (the web data's `location` or spawns off the
   instance maps' areas: Techbot, Maraudon's Desolace caves) or rank an
-  ordinary NPC (no Wowhead boss flag, not rare, no green or better item
+  ordinary NPC (no web boss flag, not rare, no green or better item
   only it drops at 5% or more) says so, counted as "no boss of it in
   Forever's sources". `codex parity
   [--ours <dir>] [--against <dir>]` reruns the comparison. The report also
@@ -4784,19 +4784,19 @@ built.
 
   The gaps: seven Forever instances AtlasLoot lists ahead of release are not
   in the client (no `Map` row); the Hall of Thanes' entrance stays
-  different (QuestieDB's Ironforge 27.6,47.8, where Wowhead Forever's
-  comments put the quest givers "near the entrance", against 43.5,52) until
+  different (QuestieDB's Ironforge 27.6,47.8, where players'
+  reports put the quest givers near the entrance, against 43.5,52) until
   a recording settles it; AtlasLoot's extra bosses (the Ring of
   Law's fighters, rare spawns, chests) are not `DungeonEncounter` rows;
   reputation standings that vendors gate in gossip, and battleground rewards
   AtlasLoot files as PvP, are in no client table (`ItemSparse` carries no
-  `MinFactionID` or `RequiredPVPRank` for them, and Wowhead Forever's Sells
+  `MinFactionID` or `RequiredPVPRank` for them, and Forever's web data Sells
   standing is that same `MinReputation`). A vendor's, giver's or quest's gate
   comes from the cited table `tools/lib/codex/repgates.json`
   (`loadRepGateTable`, provenance `curated`: rows `{ item, name, faction,
   standing, npcs: [vendors or givers] | quest (+ choice), source, note? }`,
-  one per item and faction, each citing warcraft.wiki.gg, else Wowhead
-  Classic's reputation guides or QuestieDB; the Alterac Valley and Warsong
+  one per item and faction, each citing warcraft.wiki.gg, else classic
+  reputation guides or QuestieDB; the Alterac Valley and Warsong
   Gulch supply officers, Argent Dawn quartermasters, Timbermaw Hold, Duke
   Hydraxis, Rin'wosho the Trader's barter quests, which the row also makes
   the item's quest source since QuestieDB lists no rewards for them), from a
@@ -4819,7 +4819,7 @@ built.
   the Neutral gate) and the world-drop Warbear patterns 15742 and 15754
   (Timbermaw Hold sells 20253 and 20254, gated in `ItemSparse`). An NPC that
   casts a spell creating an item (client `SpellEffect` 24; who casts it,
-  Wowhead Forever's spell page in the cache) hands it out: a `gift { npc,
+  Forever's spell data in the cache) hands it out: a `gift { npc,
   spell }` source (Duke
   Hydraxis's Aqual and Eternal Quintessence). 26 Forever rares no
   database ranks yet. The 251 confirmed drop chances the release lacks are
@@ -4962,7 +4962,7 @@ exclusive group: pfQuest `close` united with QuestieDB `exclusiveTo`.
    `src/read/baked.lua` and `normalize.default`). Field layouts come from the
    installed `src/meta/*Meta.lua`, and support data from `support/Forever/*`:
    QuestXP, DropTables (chance = manual correction, else cmangos, else
-   Wowhead, as `DropDB.GetItemDroprate`), Zones (AreaID → UiMapID). It adds
+   the web database, as `DropDB.GetItemDroprate`), Zones (AreaID → UiMapID). It adds
    Forever-only quests, npcs, objects and items. On shared ones QuestieDB wins
    on every scalar field it has a value for (titles, levels, masks, objectives,
    spawns), and pfQuest-only fields stay. **Source lists are unions**: item
@@ -4979,19 +4979,19 @@ exclusive group: pfQuest `close` united with QuestieDB `exclusiveTo`.
    licence file (CurseForge says GPL-3.0; the maintainers say to treat them as
    all rights reserved, Questie issue #4447). The data stays in `data/`, and
    only the importer is in this repository.
-3. **Wowhead Forever's change notes** (`tools/lib/data/wowhead.js`,
+3. **Forever's change notes** (`tools/lib/data/wowhead.js`,
    `--no-wowhead` skips them, as does a build without QuestieDB): the quest
    list of every zone and city page and of the nine class pages (class
-   quests are filed there, not under a zone) on wowhead.com/forever, read from
+   quests are filed there, not under a zone) of Forever's quest data, read from
    `data/sources/wowhead/zones.json`; without that cache this step adds
-   nothing. A quest Wowhead marks updated with "Experience
+   nothing. A quest the list marks updated with "Experience
    X instead of Y", "Level X instead of Y" or "Requires level X instead of Y"
    gets X where its value is still the old Y (for XP, also where it has none),
-   and one marked "Renamed from Y" gets Wowhead's Forever name where its title
+   and one marked "Renamed from Y" gets Forever's name where its title
    is still Y (Chastise, formerly A Lack of Fear); any other value is left
    alone, and the quest's `source` gains `wowhead:xp`, `wowhead:level`,
    `wowhead:minLevel` or `wowhead:title`. Only rows whose category is the
-   zone's area count: Wowhead answers an unknown zone path with a generic list.
+   zone's area count: the web database answers an unknown zone path with a generic list.
    Its Forever database also lists datamined quests that are not live (`<NYI>`
    placeholders, Season of Discovery leftovers), so presence there is not
    evidence that a quest is in the game.
@@ -5046,7 +5046,7 @@ Quest `xp`: recordings first (`rewardXpBase` wins; otherwise the largest
 above the quest, since Classic reduces XP beyond that, so an over-levelled
 observation never overwrites a full one; `source` names `recorder:xp-base`,
 `recorder:xp-log` or `recorder:xp-turnin`). Then QuestieDB's QuestXP, with
-Wowhead's "Experience X instead of Y" notes applied where it still has the old
+Forever's "Experience X instead of Y" notes applied where it still has the old
 value (above). corrections.json `xp` replaces both: Forever about doubled the
 XP of many dungeon quests, and QuestXP still has the Classic value for some
 (issue #394), so those take the XP shown by in-game evidence dated after the
@@ -5058,10 +5058,10 @@ quest in the same dungeon: the extra XP was twice as much before the change,
 so such a value can't be a pre-change one. Then, for quests
 still without XP, the Forever web databases
 (`--no-web-xp` skips them; results are cached in
-`data/sources/webxp/quest-xp.json`): wowforevertalents.com (Forever beta client
-cache, tag `wowforevertalents:xp`), else foreverchanges.pro (Wowhead's Forever
-database: the quest's reward, `foreverchanges:xp`, or its quest-chain list,
-`foreverchanges:xp-chain`), else the XP on Wowhead's zone quest list
+`data/sources/webxp/quest-xp.json`): the Forever client's quest cache (tag
+`wowforevertalents:xp`), else Forever's quest chain data (the quest's reward,
+`foreverchanges:xp`, or its quest-chain list, `foreverchanges:xp-chain`), else
+the XP on Forever's zone quest list
 (`wowhead:xp`). `meta.counts` gives `questXpFromWeb`, `questXpFromWowhead` and
 `wowheadChanged` ({ xp, level, minLevel, title }).
 

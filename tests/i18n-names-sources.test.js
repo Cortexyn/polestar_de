@@ -1,6 +1,6 @@
 'use strict';
 // The names packs' sources beside DingDB and pfQuest (`i18n names`): what is
-// cached of Wowhead's Forever database in each language
+// cached of Forever's quest data in each language
 // (tools/lib/i18n/names-wowhead.js: list pages and tooltips, bracketed names
 // dropped), the client's tables, and which source wins an id
 // (tools/lib/i18n/names.js buildNames).
@@ -23,11 +23,11 @@ const writeJson = (file, value) => {
 	fs.writeFileSync(file, JSON.stringify(value));
 };
 
-test('every client language has its Wowhead path (the names packs\' credit)', () => {
+test('every client language has its web path (the names packs\' credit)', () => {
 	assert.deepEqual(Object.keys(LOCALE_PATHS).sort(), [...LOCALE_CODES].sort());
 });
 
-test('cached Wowhead lists: each language\'s rows, the English list\'s names beside them; a bracketed name is none', () => {
+test('cached web lists: each language\'s rows, the English list\'s names beside them; a bracketed name is none', () => {
 	const sourcesDir = tmpdir('polestar-names-wh-');
 	writeJson(wh.englishListFile(sourcesDir, 'npc'), { type: 'npc', chunks: [{ lo: 0, hi: 200, rows: [{ id: 5, name: 'Npc 5 ' }, { id: 7, name: 'Npc 7' }] }] });
 	writeJson(wh.localeListFile(sourcesDir, 'ruRU', 'npc'), { type: 'npc', chunks: [
@@ -41,7 +41,7 @@ test('cached Wowhead lists: each language\'s rows, the English list\'s names bes
 	assert.deepEqual(ru.fetched, { first: T0, last: T1 });
 });
 
-test('cached Wowhead tooltips: a name no list gave, a 404 none, a quest\'s objective line read', () => {
+test('cached web tooltips: a name no list gave, a 404 none, a quest\'s objective line read', () => {
 	const sourcesDir = tmpdir('polestar-names-tip-');
 	writeJson(wh.localeListFile(sourcesDir, 'ruRU', 'npc'), { type: 'npc', chunks: [{ lo: 0, hi: 300, fetchedAt: T0, rows: [{ id: 250, name: 'Список 250' }] }] });
 	writeJson(wh.tooltipFile(sourcesDir, 'ruRU', 'npc', 250), { id: 250, name: 'Tip 250', fetchedAt: T0 });
@@ -60,12 +60,12 @@ test('cached Wowhead tooltips: a name no list gave, a 404 none, a quest\'s objec
 	assert.deepEqual(ru.fetched, { first: T0, last: T1 });
 });
 
-test('no Wowhead cache: no names, nothing read', () => {
+test('no web names cache: no names, nothing read', () => {
 	const de = wh.loadWowheadNames(tmpdir('polestar-names-none-'), 'deDE');
 	assert.deepEqual([de.names.npc.size, de.listed.quest.size, de.objective.size, de.fetched], [0, 0, 0, null]);
 });
 
-test('per id the client\'s tables win, then Wowhead, then DingDB, then pfQuest; the extra kinds come from the client\'s tables', () => {
+test('per id the client\'s tables win, then the web names, then DingDB, then pfQuest; the extra kinds come from the client\'s tables', () => {
 	const m = (o) => new Map(Object.entries(o).map(([k, v]) => [Number(k), v]));
 	const ids = {
 		quest: new Set([1, 2]), npc: new Set([1, 2, 3, 4]), object: new Set(), item: new Set([10, 11]),
@@ -80,10 +80,10 @@ test('per id the client\'s tables win, then Wowhead, then DingDB, then pfQuest; 
 	};
 	const out = names.buildNames({ locales: ['ruRU'], ids, ding, pf, wago, wowhead }).ruRU;
 	const obj = (k) => Object.fromEntries(out.names[k]);
-	assert.deepEqual(obj('item'), { 10: 'Клиент 10', 11: 'Вовхед 11' }, 'the client table first, Wowhead for the rest');
-	assert.deepEqual(obj('npc'), { 1: 'Вовхед 1', 2: 'Динг 2', 3: 'Пф 3' }, 'Wowhead before DingDB; a pfQuest name equal to its English one is none');
+	assert.deepEqual(obj('item'), { 10: 'Клиент 10', 11: 'Вовхед 11' }, 'the client table first, the web names for the rest');
+	assert.deepEqual(obj('npc'), { 1: 'Вовхед 1', 2: 'Динг 2', 3: 'Пф 3' }, 'the web names before DingDB; a pfQuest name equal to its English one is none');
 	assert.deepEqual(obj('quest'), { 1: 'Динг 1', 2: 'Вовхед 2' });
-	assert.deepEqual(obj('objective'), { 1: 'Убить всех', 2: 'Цель Вовхеда' }, 'pfQuest\'s $B is a space; Wowhead first');
+	assert.deepEqual(obj('objective'), { 1: 'Убить всех', 2: 'Цель Вовхеда' }, 'pfQuest\'s $B is a space; the web names first');
 	assert.deepEqual([obj('map'), obj('encounter'), obj('faction'), obj('taxi')], [{ 36: 'Мертвые копи' }, { 230: 'Событие' }, { 72: 'Штормград' }, { 2: 'Штормград, Элвиннский лес' }],
 		'only the ids Polestar names; every encounter');
 	assert.deepEqual(out.from.npc, { wago: 0, wowhead: 1, ding: 1, pfquest: 1 });
@@ -125,7 +125,7 @@ test('a name some source left in English never beats a translation, whichever so
 	const ding = { zhCN: { npc: m({ 1: '泰达希尔卫兵', 2: 'Hogger', 3: 'Grund Drokda' }), item: m({}) } };
 	const pf = { zhCN: { npc: m({ 2: '霍格' }), item: m({ 10: '松鼠坚果' }) }, enUS: { npc: m({}), item: m({}) } };
 	const out = names.buildNames({ locales: ['zhCN'], ids, ding, pf, wago, wowhead, english }).zhCN;
-	assert.deepEqual(Object.fromEntries(out.names.npc), { 1: '泰达希尔卫兵', 2: '霍格', 4: '阿尔巴·晴月' }, 'Wowhead\'s and DingDB\'s English give way to the next translation');
+	assert.deepEqual(Object.fromEntries(out.names.npc), { 1: '泰达希尔卫兵', 2: '霍格', 4: '阿尔巴·晴月' }, 'the web names\' and DingDB\'s English give way to the next translation');
 	assert.deepEqual(Object.fromEntries(out.names.item), { 10: '松鼠坚果' }, 'the client table\'s English too');
 	assert.deepEqual([...out.english.npc], [3], 'named only in English: nothing stored, the English shows');
 });

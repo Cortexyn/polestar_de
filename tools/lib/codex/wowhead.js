@@ -1,5 +1,5 @@
 'use strict';
-// The cached Wowhead Forever facts the Codex reads: per entity, what its
+// The cached Forever facts the Codex reads: per entity, what its
 // other release-safe inputs lack. Facts only (ids, numbers, coordinates);
 // credited in THIRD_PARTY.md; provenance `wowhead`, below recordings and the
 // client tables (docs/SUITE.md, "Data layer").
@@ -8,9 +8,9 @@
 // No cache: empty facts, and the build goes on without them.
 //
 // <sources>/wowhead/codex/<type>/<id>.json, one entity each ({ notFound: true }
-// for one Wowhead had not):
+// for one the source had not):
 //   npc     name, level [lo, hi], classification (rare, rareelite, elite,
-//           boss), boss (Wowhead's boss flag), location (AreaTable ids: an
+//           boss), boss (the boss flag), location (AreaTable ids: an
 //           instance's area for an NPC inside one), spawns { uiMap: [[x, y]] }
 //           (map percent), drops [{ item, count, outof, common }] (count out
 //           of the looted kills; common: the world-drop pool)
@@ -26,14 +26,14 @@
 //
 //   loadWowhead(sourcesDir) -> { npc: { id: facts }, object: {...}, item: {...}, spell: {...}, listed: { npc: { id: row }, ... } }
 //   chanceOf(drop)          -> percent, 2 decimals
-//   LOCALE_PATHS            Wowhead's path segment of each client language
+//   LOCALE_PATHS            the path segment of each client language
 
 const fs = require('node:fs');
 const path = require('node:path');
 
 const TYPES = ['npc', 'object', 'item', 'spell'];
 const CODEX_LISTS = ['npc', 'object', 'item'];
-// Wowhead's path segment of each client language (www.wowhead.com/forever/ru/...).
+// The URL path segment of each client language (.../forever/ru/...).
 const LOCALE_PATHS = { deDE: 'de', esES: 'es', esMX: 'mx', frFR: 'fr', koKR: 'ko', ptBR: 'pt', ruRU: 'ru', zhCN: 'cn', zhTW: 'tw' };
 
 // The cached pages; `listed` holds the list rows by type (the pages' own

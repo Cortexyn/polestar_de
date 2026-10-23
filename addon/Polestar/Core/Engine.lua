@@ -1426,8 +1426,8 @@ local goalDone
 
 -- The quest-log line an objective goal reads (#223, #279, #335). The game
 -- does not always list a quest's objectives in the order the guide was
--- compiled with: Slimy Menace counts Murlocs first where the quest data and
--- Wowhead list Murloc Streamrunners first, so `oi` alone read the other
+-- compiled with: Slimy Menace counts Murlocs first where the quest data
+-- lists Murloc Streamrunners first, so `oi` alone read the other
 -- objective's count and ticked the other line. With more than one line: the
 -- line labelled with the goal's target (its NPC, item or object, in the
 -- client's language where Polestar.Names has it) wins, else the line holding

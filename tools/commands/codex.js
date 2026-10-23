@@ -147,7 +147,7 @@ async function runParity(rest) {
 	const areaRows = csv('AreaTable');
 	const norm = (x) => String(x || '').toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
 	const clientInstances = new Set((mapRows || []).filter((r) => r.InstanceType === '1' || r.InstanceType === '2').map((r) => norm(r.MapName_lang)));
-	// The AreaTable areas on instance maps (Wowhead's `location` inside one).
+	// The AreaTable areas on instance maps (the web data's `location` inside one).
 	const instanceAreas = mapRows && areaRows ? new Set(require('../lib/codex/journal').instanceMapsOf(mapRows, areaRows).flatMap((m) => m.inner)) : null;
 	const oursCodex = { ...readCodex(ours), evidence: null };
 	const { report, files } = writeParity(oursCodex, readCodex(against), path.join(ROOT, 'data', 'local'), { wowhead: loadWowhead(SOURCES), clientInstances, instanceAreas });

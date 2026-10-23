@@ -241,7 +241,7 @@ has the details.
 
 - `node tools/polestar.js i18n names [<locale>...]` rebuilds the addons. Per
   id the first source with a name wins: the client's own tables in that
-  language (wago.tools), Wowhead's Forever database in that language (what
+  language (wago.tools), Forever's quest data in that language (what
   is cached under `data/sources/wowhead/names`), DingDB (cloned into
   `data/sources/ding` at the commit pinned in `tools/lib/i18n/names.js`,
   every file checked against its sha256) and pfQuest's `db/<locale>` (the
@@ -252,7 +252,7 @@ has the details.
   is one marking unused content (`[PH]`, `(DNT)`...). The client tables
   come from the newest build that has them all in English and every
   language; without one the build stops (`--no-tables` leaves them out on
-  purpose). The Wowhead names are read from the cache in
+  purpose). The web names are read from the cache in
   `data/sources/wowhead/names/`, and without it that source is empty.
   `--offline` reads only the caches, `--no-questie` leaves DingDB out. It
   prints, per language, how many ids of each kind have no name. Commit the
@@ -263,7 +263,7 @@ has the details.
 - To move the pin, read what changed in Ding's `Ding/DB/`, then set the
   commit, version and sha256s of `DING` in `tools/lib/i18n/names.js`; a file
   that differs from its pin stops the build.
-- A new language needs its Wowhead path (`LOCALE_PATHS` in
+- A new language needs its web path (`LOCALE_PATHS` in
   `tools/lib/codex/wowhead.js`, for the cache and the packs' credit), a
   DingDB file and `DING` pin if Ding
   has it, its AddOns-list text (`tools/lib/i18n/toc.js`) and the folder's

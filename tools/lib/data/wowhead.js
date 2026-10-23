@@ -1,5 +1,5 @@
 'use strict';
-// Wowhead's Forever database (https://www.wowhead.com/forever): the quest
+// Forever's quest data from a web quest database: the quest
 // facts Forever changed. Facts only (ids, XP, levels); results stay in data/,
 // which is gitignored.
 //
@@ -9,7 +9,7 @@
 // Cache: <sources>/wowhead/zones.json ({ fetchedAt, zones: { "<area>": rows } }),
 // one list per zone, class (a negative category per class) and instance (the
 // dungeon and raid lists, each row under its instance's area: 1581 The
-// Deadmines). A row: { id, name, zone, level, reqlevel, xp, type (Wowhead's
+// Deadmines). A row: { id, name, zone, level, reqlevel, xp, type (the list's
 // quest type: 81 Dungeon, 62 Raid, 1 Elite, 41 PvP), side (1 Alliance, 2
 // Horde, 3 both), choices (one of them), items (every one) [[item, count]],
 // money (copper), rep [[faction, value]], status (new | updated |
@@ -19,7 +19,7 @@
 // What the build does with it:
 // - applyChangeNotes: a note "Experience X instead of Y", "Level X instead of
 //   Y" or "Requires level X instead of Y" sets X where our value is still Y
-//   (or, for XP, missing), and "Renamed from Y" gives the quest Wowhead's
+//   (or, for XP, missing), and "Renamed from Y" gives the quest its
 //   Forever name where our title is still Y: the note says Forever changed
 //   it, and we still hold the old value. A different value of ours is left
 //   alone.
@@ -27,9 +27,9 @@
 //   XP sources, from the zone list's xp.
 // - applyWowheadFacts: each listed quest's `wowhead` record { zone, type,
 //   side, choices, items, money, rep } (zone: the row's category), which
-//   `codex build` reads for the Dungeons journal (Wowhead's instance
+//   `codex build` reads for the Dungeons journal (the list's instance
 //   category, rewards a recording or ForeverLevelingBiS lack).
-// Wowhead's Forever database also lists datamined quests that are not live
+// Forever's quest data also lists datamined quests that are not live
 // (<NYI> placeholders, Season of Discovery leftovers), so a quest's presence
 // there says nothing about whether it is in the game.
 
@@ -111,10 +111,10 @@ function fillWowheadXp(quests, rows) {
 	return n;
 }
 
-// Wowhead's instance category, type, side and rewards on each listed quest
+// The list's instance category, type, side and rewards on each listed quest
 // (`wowhead`, read by `codex build`). -> count of quests given one
 //
-// Where Forever changed a quest's rewards, Wowhead's row can name an item as
+// Where Forever changed a quest's rewards, the list's row can name an item as
 // both a choice and a reward: Deviate Hides (1486) lists Deviate Hide Pack and
 // Slick Deviate Leggings in both, its notes saying "Rewards: adds Deviate Hide
 // Pack, Slick Deviate Leggings" and "no longer Choice of ..." (both given
@@ -122,7 +122,7 @@ function fillWowheadXp(quests, rows) {
 // Choice of Heat Resistant Mitts, Choice of Safety Boots" (the gloves became
 // one of three choices). So an item in both is a reward when a note says
 // "no longer Choice of", else a choice. A reputation of 1 (Magram Alliance's
-// Gelkis Clan Centaur, a Silithus quest's Stormwind) is no amount Wowhead
+// Gelkis Clan Centaur, a Silithus quest's Stormwind) is no amount the list
 // knows: left out.
 function applyWowheadFacts(quests, rows) {
 	let n = 0;

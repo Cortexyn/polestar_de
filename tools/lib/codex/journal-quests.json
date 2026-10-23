@@ -5,7 +5,7 @@
 			"quest": 5526,
 			"instance": "dire-maul",
 			"source": "https://www.wowhead.com/forever/quest=5526",
-			"note": "Shards of the Felvine (Rabine Saturna, Moonglade): Wowhead Forever's Quick Facts say Type: Dungeon, and its objective is to find the Felvine in Dire Maul, take a shard from it once Alzzin the Wildshaper falls and seal it in the Reliquary of Purity (checked 2026-10-15). QuestieDB files it under Moonglade and lists only the Sealed Reliquary of Purity, which no NPC drops."
+			"note": "Shards of the Felvine (Rabine Saturna, Moonglade): Forever's quest data says Type: Dungeon, and its objective is to find the Felvine in Dire Maul, take a shard from it once Alzzin the Wildshaper falls and seal it in the Reliquary of Purity (checked 2026-10-15). QuestieDB files it under Moonglade and lists only the Sealed Reliquary of Purity, which no NPC drops."
 		}
 	]
 }

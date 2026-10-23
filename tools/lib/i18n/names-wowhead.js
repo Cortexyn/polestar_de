@@ -1,5 +1,5 @@
 'use strict';
-// `i18n names`: the names Wowhead's Forever database gives in each client
+// `i18n names`: the names Forever's quest data gives in each client
 // language (docs/TRANSLATING.md, "Names"). Its database is the Forever
 // client's, so it holds the names of Forever's own quests, NPCs, objects and
 // items, which neither DingDB nor pfQuest has.
@@ -12,7 +12,7 @@
 // - tooltips for ids no list held: data/sources/wowhead/names/<locale>/<type>/<id>.json.
 // A missing cache reads as no names.
 //
-// Wowhead marks a name it has no translation for with brackets
+// The web data marks a name it has no translation for with brackets
 // ("[Alba Fairmoon]"): those are no names. An unbracketed name equal to the
 // English one is the language's own (German keeps many proper names).
 
@@ -41,7 +41,7 @@ const unhtml = (s) => String(s)
 	.replace(/&gt;/g, '>')
 	.replace(/&amp;/g, '&');
 
-// A name Wowhead has in this language: not empty, not "[English]" (no
+// A name the web data has in this language: not empty, not "[English]" (no
 // translation), not a "[PH] ..." placeholder.
 function realName(name) {
 	const s = typeof name === 'string' ? name.trim() : '';
@@ -58,7 +58,7 @@ function questObjective(tooltip) {
 }
 
 // Everything cached for one language: { names: { type: Map id -> name },
-// english: { type: Map id -> Wowhead's English name } (the build tells a
+// english: { type: Map id -> the web data's English name } (the build tells a
 // translation from a string left in English by it), listed: { type: Set of
 // ids a list row holds, named or not }, objective: Map quest id -> text
 // (tooltips), fetched: { first, last } (ISO dates) }.
