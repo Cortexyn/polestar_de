@@ -21,24 +21,25 @@ const { applyQuestie } = require('./questie-merge');
 const { loadWebXp, WFT, FC } = require('./webxp');
 const { loadZoneQuests, applyChangeNotes, fillWowheadXp, applyWowheadFacts, BASE: WOWHEAD } = require('./wowhead');
 const { loadSpawnHeights, loadQuestCounts, HEIGHTS_SOURCE, COUNTS_SOURCE } = require('../travel/cmangos');
-const CORRECTIONS = require('./corrections.json');
+const { loadCorrections } = require('./corrections');
 
-// tools/lib/data/corrections.json: quests `set` fields; items `removeDrops`/`removeVendors`; npcs/objects `set`
-// fields and `addSpawns` maps. Every corrected record's source gains "polestar-correction".
-function applyCorrections(tables) {
+// tools/lib/data/corrections.json (with the private overlay, corrections.js): quests `set` fields; items
+// `removeDrops`/`removeVendors`; npcs/objects `set` fields and `addSpawns` maps. Every corrected record's
+// source gains "polestar-correction".
+function applyCorrections(tables, corrections) {
 	let n = 0;
 	const tag = (e) => {
 		if (!e.source) e.source = [];
 		if (!e.source.includes('polestar-correction')) e.source.push('polestar-correction');
 		n++;
 	};
-	for (const [id, c] of Object.entries(CORRECTIONS.quests || {})) {
+	for (const [id, c] of Object.entries(corrections.quests || {})) {
 		const q = tables.quests[id];
 		if (!q) continue;
 		Object.assign(q, c.set);
 		tag(q);
 	}
-	for (const [id, c] of Object.entries(CORRECTIONS.items || {})) {
+	for (const [id, c] of Object.entries(corrections.items || {})) {
 		const it = tables.items[id];
 		if (!it) continue;
 		for (const kind of ['npc', 'object']) for (const x of (c.removeDrops || {})[kind] || []) delete it.drops[kind][x];
@@ -46,7 +47,7 @@ function applyCorrections(tables) {
 		tag(it);
 	}
 	for (const kind of ['npcs', 'objects']) {
-		for (const [id, c] of Object.entries(CORRECTIONS[kind] || {})) {
+		for (const [id, c] of Object.entries(corrections[kind] || {})) {
 			const e = tables[kind][id];
 			if (!e) continue;
 			if (c.set) Object.assign(e, c.set);
@@ -228,7 +229,7 @@ async function buildData(options = {}) {
 		warnings.push(...zl.warnings);
 		wh = { zl, changed: applyChangeNotes(norm.quests, zl.rows), facts: applyWowheadFacts(norm.quests, zl.rows), xpFilled: 0 };
 	}
-	if (qz) qstats.corrections = applyCorrections(norm);
+	if (qz) qstats.corrections = applyCorrections(norm, loadCorrections({ root, privateFile: options.correctionsPrivate }));
 
 	// Quest XP still missing after QuestieDB, from the Forever web databases.
 	let webxp = null;

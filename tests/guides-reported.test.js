@@ -16,6 +16,7 @@ const path = require('node:path');
 const { needs } = require('./helpers/data');
 const { compileSources, OFFICIAL_DIR } = require('../tools/lib/dsl/project');
 const { loadData } = require('../tools/lib/dsl/data');
+const { loadCorrections } = require('../tools/lib/data/corrections');
 const { DATA, SOURCES } = require('../tools/lib/paths');
 const { loadWowhead } = require('../tools/lib/codex/wowhead');
 const { runAddon } = require('./helpers/lua');
@@ -1229,10 +1230,12 @@ test(`${ZEPHRAS_HORDE}: Sato's report: Welcome to Shen'dar Village follows its o
 });
 
 // Aggressive Encroachment: the Scrawny Ursera are on the slope west of
-// Thendal Village (Forever's quest data), not in the village.
-test('Sato\'s report: the Scrawny Ursera step leads to the slope west of Thendal Village', { skip }, () => {
-	const corrections = require('../tools/lib/data/corrections.json');
-	const wowhead = corrections.npcs[250926].addSpawns[2521].pts;
+// Thendal Village (Forever's quest data), not in the village. That spawn fix is
+// in the private corrections overlay, so this needs it.
+test('Sato\'s report: the Scrawny Ursera step leads to the slope west of Thendal Village', { skip }, (t) => {
+	const fix = (loadCorrections().npcs[250926] || {}).addSpawns;
+	if (!fix) return t.skip('needs the private corrections overlay (data/local/corrections-private.json)');
+	const wowhead = fix[2521].pts;
 	assert.ok(wowhead.every(([x]) => x <= 41.6), 'the corrected spawns are all west of the village');
 	for (const guide of [ZEPHRAS_HORDE, ZEPHRAS_ALLIANCE]) {
 		const list = goals(guide);
