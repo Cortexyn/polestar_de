@@ -33,7 +33,6 @@ local queue = {}          -- { bag, slot, itemID, ... } flattened triples
 local qi, qn = 1, 0
 local sold, earned = 0, 0
 local ticker
-local generation = 0
 
 -- A slot holding a grey item worth money: itemID, stack count, price per item.
 local function junkAt(bag, slot)
@@ -79,7 +78,6 @@ local function repair()
 end
 
 local function finish()
-	generation = generation + 1
 	stop()
 	if sold > 0 then
 		ns.Print(format(sold == 1 and L["Sold %d grey item for %s."] or L["Sold %d grey items for %s."], sold, QoL.Money(earned)))
@@ -98,7 +96,6 @@ local function step()
 		return
 	end
 	if not QoL.On("sellJunk") or QoL.Shift() then
-		generation = generation + 1
 		finish()
 		return
 	end
@@ -118,7 +115,6 @@ local function step()
 end
 
 function Vendor.OnMerchantShow()
-	generation = generation + 1
 	stop()
 	open = true
 	sold, earned, qi, qn = 0, 0, 1, 0
@@ -142,13 +138,11 @@ function Vendor.OnMerchantShow()
 	step()
 	if qi <= qn and C_Timer and C_Timer.NewTicker then
 		stop()
-		local gen = generation
-		ticker = C_Timer.NewTicker(INTERVAL, function() if gen == generation then step() end end)
+		ticker = C_Timer.NewTicker(INTERVAL, step)
 	end
 end
 
 function Vendor.OnMerchantClosed()
-	generation = generation + 1
 	open = false
 	if qn > 0 and sold > 0 then finish() else stop() end
 	qi, qn = 1, 0
@@ -159,7 +153,6 @@ ns.RegisterEvent("MERCHANT_CLOSED", Vendor.OnMerchantClosed)
 ns.RegisterEvent("PLAYER_LOGOUT", Vendor.OnMerchantClosed)
 ns.On("SETTING_CHANGED", function(path)
 	if (path == "qol.sellJunk" or path == "qol" or path == "") and not QoL.On("sellJunk") and qn > 0 then
-		generation = generation + 1
 		finish()
 	end
 end)

@@ -5,9 +5,10 @@
 -- this visit is never bought again. The next purchase waits until the last
 -- one has landed (its service is no longer "available"), whatever else
 -- updates the list; one that has not landed after LAND_WAIT seconds was
--- refused, and ends the run. Closing the window counts a purchase still on
--- its way: it was sent while available and affordable, and the list cannot
--- be read once the window is gone. Only "available" services you can afford
+-- refused, and ends the run. Closing the window, or stopping the run (the
+-- setting off, Shift), counts a purchase still on its way: it was sent while
+-- available and affordable, and is paid for whether or not the list has caught
+-- up. Only "available" services you can afford
 -- are bought, and only from a class trainer of your class that
 -- Core/ClassTrainers.lua knows (Engine.IsClassTrainer): riding, weapon, pet
 -- and profession trainers are left alone. Prints what was learned, and what
@@ -79,8 +80,9 @@ end
 
 local function cancel()
 	purchases = purchases + 1
-	-- A purchase that has already landed still counts in the summary.
-	if active and pending and not stillAvailable(pending) then
+	-- A purchase on its way was sent while available and affordable: it
+	-- lands and is paid for, so it counts in the summary (as on close).
+	if active and pending then
 		learned, spent = learned + 1, spent + pendingCost
 	end
 	pending = nil

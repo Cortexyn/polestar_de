@@ -1,4 +1,3 @@
--- luacheck: read globals GetCorpseRecoveryDelay
 -- Requests from other players: summons, resurrections, party and guild
 -- invitations, duels. Each request event is registered only while a setting
 -- that needs it is on (QoL.WhileOn), so what is off costs nothing. Life
@@ -146,7 +145,7 @@ local function acceptResurrect(caster, gen)
 	if not Social.TakeResurrect(caster) or not AcceptResurrect then return end
 	cancelResurrect()
 	AcceptResurrect()
-	ns.Print(caster and format(L["Accepted a resurrection from %s."], caster) or L["Accepted a resurrection."])
+	ns.Print(format(L["Accepted a resurrection from %s."], caster))
 end
 
 function Social.OnResurrect(_, caster)

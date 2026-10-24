@@ -1671,6 +1671,18 @@ test('trainer: a purchase that has landed when Shift stops the run is still coun
 	assert.deepEqual(out, { bought: 1, money: 900, msg: true });
 });
 
+test('trainer: a purchase still on its way when the setting is turned off is counted in the summary, as on close', () => {
+	const [out] = run(`${SPELLS}
+		set("trainAll", true)
+		q.money = 1000
+		q.openTrainer()                  -- the first purchase is on its way
+		set("trainAll", false)
+		stub.advance(3)
+		emit({ bought = #calls("BuyTrainerService"), money = q.money, msg = printed("Learned 1 spell for 1s 0c") })
+	`);
+	assert.deepEqual(out, { bought: 1, money: 900, msg: true });
+});
+
 // ---------------------------------------------------------------------------
 // Quest rewards
 // ---------------------------------------------------------------------------
