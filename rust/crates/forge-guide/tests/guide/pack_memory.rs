@@ -88,6 +88,8 @@ fn our_pack_with_baked_legs_is_format_8_its_legs_in_the_race_parts_beside_the_fa
 	assert_match(&files["../Polestar_Guides_Human/Legs.lua"], r#"Polestar\.RegisterLegs\("guides", "test", \{\n\t\["forever/alliance/elwynn"\] = \{ \[1\] = "CgA" \},\n\}\)"#);
 	assert!(!files.contains_key("../Polestar_Guides_Orc/Legs.lua"), "no Horde race carries the Alliance guide's legs");
 	assert_match(&files["LICENSE-DATA.txt"], r"Credit: Leffe's navigation maps\.");
+	// Each faction part carries the same notice as Polestar_Guides, the Leffe credit included.
+	assert_eq!(files["../Polestar_Guides_Alliance/LICENSE-DATA.txt"], files["LICENSE-DATA.txt"]);
 }
 
 #[test]

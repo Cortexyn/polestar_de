@@ -420,7 +420,8 @@ pub fn build_pack_files(
 		gl.push_str(&crate::emit::emit_retired(&id, retired));
 	}
 	files.push(("Guides.lua".into(), t(gl)));
-	files.push(("LICENSE-DATA.txt".into(), t(crate::emit::emit_license(&meta, !leg_parts.is_empty()))));
+	let license_data = crate::emit::emit_license(&meta, !leg_parts.is_empty());
+	files.push(("LICENSE-DATA.txt".into(), t(license_data.clone())));
 	if let Some(l) = license {
 		files.push(("LICENSE.txt".into(), t(l.to_string())));
 	}
@@ -430,6 +431,7 @@ pub fn build_pack_files(
 		files.push((format!("../{name}/{name}.toc"), t(crate::emit::emit_faction_toc(manifest, faction, iface))));
 		let es: Vec<V> = list.iter().map(entry).collect();
 		files.push((format!("../{name}/Guides.lua"), t(crate::emit::emit_guides_with(&es, false, true))));
+		files.push((format!("../{name}/LICENSE-DATA.txt"), t(license_data.clone())));
 		if let Some(l) = license {
 			files.push((format!("../{name}/LICENSE.txt"), t(l.to_string())));
 		}

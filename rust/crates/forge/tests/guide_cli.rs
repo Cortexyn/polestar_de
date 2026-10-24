@@ -75,6 +75,7 @@ fn compile_output_is_byte_identical_across_runs_and_skips_drafts() {
 			"Polestar_Guides/Pack.lua",
 			"Polestar_Guides/Polestar_Guides.toc",
 			"Polestar_Guides_Alliance/Guides.lua",
+			"Polestar_Guides_Alliance/LICENSE-DATA.txt",
 			"Polestar_Guides_Alliance/Polestar_Guides_Alliance.toc",
 		]
 	);
