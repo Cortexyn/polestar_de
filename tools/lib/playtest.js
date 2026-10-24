@@ -504,14 +504,14 @@ async function playtest({ dir, manifest, official = false, filter = null, classe
 	data = data || playData(dataDir, dataDiag);
 	const contextData = official ? null : contextDataDir && path.resolve(contextDataDir) !== path.resolve(dataDir) ? playData(contextDataDir, dataDiag) : data;
 	if (dataDiag.hasErrors()) return { results: [], diag: dataDiag, played: 0, dataMissing: true };
-	const lines = [];
+	const skillLines = [];
 	for (const name of learn || []) {
 		const prof = data.professionNamed(name);
 		if (!prof) dataDiag.error('--learn', 0, `profession "${name}" is not in the reference data (professions.json)`);
-		else lines.push(prof.id);
+		else skillLines.push(prof.id);
 	}
 	if (dataDiag.hasErrors()) return { results: [], diag: dataDiag, played: 0 };
-	const learnt = lines.length ? [`PLAYTEST_LEARN = ${luaValue(Object.fromEntries(lines.map((id) => [id, true])))}`] : [];
+	const learnt = skillLines.length ? [`PLAYTEST_LEARN = ${luaValue(Object.fromEntries(skillLines.map((id) => [id, true])))}`] : [];
 	let guides;
 	let diag;
 	let packs;

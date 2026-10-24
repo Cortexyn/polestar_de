@@ -69,7 +69,8 @@ options:
                         (\`--learn Herbalism,"First Aid"\`): the guide's optional
                         \`train\` of each is taken, then the steps behind
                         \`when skill\` it opens are played; on its own the
-                        simulator takes no optional goal, so no profession
+                        simulator takes no optional goal, so it learns none
+                        (a profession taught by an item is not taken)
   <dir>, --pack <dir>   the pack folder (holding pack.json)
   --guides <dir>        our pack's guide sources in another folder (default guides/)
   --data <dir>          reference data (default data/forever/)
