@@ -9,7 +9,7 @@ use forge_guide::data::Data;
 use forge_guide::diag::{Diag, Diagnostics};
 use forge_guide::js::V;
 use forge_guide::project::{build_pack, find_guide_files, find_pack_dir, load_project_data, no_reference_data, read_sources, same_path, BuildOpts, Context, FileContent};
-use forge_release::addons::{codex_refusal, notice_refusal, release_addons, retired_addons, toc_version, CODEX, RECORDER};
+use forge_release::addons::{codex_refusal, guide_notice_refusal, notice_refusal, release_addons, retired_addons, toc_version, CODEX, RECORDER};
 use forge_release::pack::{archive_entries, pack_entries, readme, sha256_hex};
 use forge_release::zip::{write_zip, Entry};
 use forge_release::{plural, shown};
@@ -178,6 +178,9 @@ fn pack_release(args: &[String], root: &Path, data_dir: &Path) -> Result<(), sup
 	forge_guide::project::write_pack_dir(&addons.join(&folder), &files)?;
 	// The folders again: the build writes our pack's parts (its faction parts, format 8).
 	let product = release_addons(&addons);
+	if let Some(why) = guide_notice_refusal(&addons, &product.names) {
+		return Err(why.into());
+	}
 
 	let gpl = Entry::file("LICENSE", license);
 	let archives = [

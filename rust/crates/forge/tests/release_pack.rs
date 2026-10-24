@@ -128,6 +128,7 @@ fn pack_zips_polestar_guides_nav_and_codex_and_the_recorder_separately_reproduci
 			// The fixture guides are Alliance guides: our pack's Alliance part, built by the pack (format 8).
 			"Polestar_Guides_Alliance/",
 			"Polestar_Guides_Alliance/Guides.lua",
+			"Polestar_Guides_Alliance/LICENSE-DATA.txt",
 			"Polestar_Guides_Alliance/Polestar_Guides_Alliance.toc",
 			"Polestar_Codex/",
 			"Polestar_Codex/LICENSE-DATA.txt",

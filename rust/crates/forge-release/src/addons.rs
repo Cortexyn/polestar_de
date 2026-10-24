@@ -70,6 +70,16 @@ pub fn notice_refusal(addons: &Path, names: &[String]) -> Option<String> {
 	None
 }
 
+/// The first of our guide parts among `names` (Polestar_Guides and its faction parts) that lacks its
+/// LICENSE-DATA.txt; None when each has one. Their guides carry the reference data's facts, so like a data
+/// addon none ships without the notice `forge guide compile` writes beside it.
+pub fn guide_notice_refusal(addons: &Path, names: &[String]) -> Option<String> {
+	let guides = forge_guide::project::OWN_FOLDER;
+	let parts: Vec<String> = std::iter::once(guides.to_string()).chain(forge_guide::project::FACTION_PARTS.iter().map(|f| forge_guide::project::part_addon(guides, f))).collect();
+	let n = names.iter().find(|n| parts.contains(n) && !addons.join(n).join("LICENSE-DATA.txt").exists())?;
+	Some(format!("{n} has no LICENSE-DATA.txt (rebuild it with `forge guide compile`)"))
+}
+
 /// Why the built Codex folder `dir` may not ship, or None when it may: it must be built, carry its
 /// Meta.lua and LICENSE-DATA.txt, and come from release-safe inputs only (never a `--local-extras` build,
 /// nor one naming AtlasLoot, RareScanner, DungeonJournal or dungeons.json among its sources).
@@ -176,5 +186,18 @@ mod tests {
 		assert_eq!(notice_refusal(&root, &names).unwrap(), "Polestar_QuestDB has no LICENSE-DATA.txt (rebuild it with `forge data questdb`)");
 		std::fs::write(root.join("Polestar_QuestDB").join("LICENSE-DATA.txt"), "Polestar quest database: third-party notices\n").unwrap();
 		assert_eq!(notice_refusal(&root, &names), None);
+	}
+
+	#[test]
+	fn a_guide_part_ships_only_with_its_notice() {
+		let root = tmp("guide-notice");
+		for n in ["Polestar_Guides", "Polestar_Guides_Horde"] {
+			addon(&root, n);
+		}
+		std::fs::write(root.join("Polestar_Guides").join("LICENSE-DATA.txt"), "notices\n").unwrap();
+		let names = vec!["Polestar_Guides".to_string(), "Polestar_Guides_Horde".to_string()];
+		assert_eq!(guide_notice_refusal(&root, &names).unwrap(), "Polestar_Guides_Horde has no LICENSE-DATA.txt (rebuild it with `forge guide compile`)");
+		std::fs::write(root.join("Polestar_Guides_Horde").join("LICENSE-DATA.txt"), "notices\n").unwrap();
+		assert_eq!(guide_notice_refusal(&root, &names), None);
 	}
 }
