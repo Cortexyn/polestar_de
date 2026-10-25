@@ -77,8 +77,9 @@ pub fn move_class(m: Move) -> u8 {
 	}
 }
 
-/// A format-4 segment's class: its move, and for a walk or motion step on his steep slope (3: a terrain triangle from
-/// 40°) or indoor ground (4 indoor, 5 indoor city) STEEP or INDOOR, as our grid's ways class their steps.
+/// A format-4 segment's class by his maps alone: its move, and for a walk or motion step on his steep slope (3: a
+/// terrain triangle from 40°) or indoor ground (4 indoor, 5 indoor city) STEEP or INDOOR. Way::onto_grid replaces it
+/// with our grid's ground wherever our grid has a surface there.
 pub fn leg_class(m: Move, ground: u8) -> u8 {
 	match (move_class(m), ground) {
 		(cls::WALK, 3) => cls::STEEP,
@@ -119,24 +120,36 @@ impl Way {
 	}
 
 	/// A way drawn on Leffe's maps, put on our grid's surfaces (`surface`: our grid's surface at (x, y) nearest
-	/// height z, within GROUND_YD -> its index in its column, its height). His floor numbers are his maps' own (a
-	/// different run of the grid adds surfaces in places), so each segment takes the index of our surface nearest its
-	/// start; his heights are 2 yd steps (floors whole yards), so each corner between the ends stands on our surface
-	/// nearest it. A hop's ends (jump, drop, climb, ride: his exact heights) keep his height, and where ours has no
-	/// surface near, his floor and height stay.
-	pub fn onto_grid(&mut self, surface: impl Fn(f64, f64, f64) -> Option<(u8, f64)>) {
+	/// height z, within GROUND_YD -> its index in its column, its height, its flags). His floor numbers are his maps'
+	/// own (a different run of the grid adds surfaces in places), so each segment takes the index of our surface
+	/// nearest its start; his heights are 2 yd steps (floors whole yards), so each corner between the ends stands on
+	/// our surface nearest it. A walking segment takes its class from our grid's ground at its matched ends, as grid
+	/// ways do (move.js segmentClass: indoor when either end is, steep on a steep column), not from his ground
+	/// classes (his steep is from 40°, ours from 50°). A hop's ends (jump, drop, climb, ride: his exact heights) keep
+	/// his height, and where ours has no surface near, his floor, height and class stay.
+	pub fn onto_grid(&mut self, surface: impl Fn(f64, f64, f64) -> Option<(u8, f64, u8)>) {
 		let n = self.pts.len();
 		let his = self.pts.clone();
-		for (s, p) in his.iter().enumerate().take(n.saturating_sub(1)) {
-			if let Some((f, _)) = surface(p[0], p[1], p[2]) {
-				self.floor[s] = f;
+		let ours: Vec<_> = his.iter().map(|p| surface(p[0], p[1], p[2])).collect();
+		for s in 0..n.saturating_sub(1) {
+			let Some((f, _, fa)) = ours[s] else { continue };
+			self.floor[s] = f;
+			if matches!(self.cls[s], cls::WALK | cls::STEEP | cls::INDOOR) {
+				let fl = fa | ours[s + 1].map_or(0, |o| o.2);
+				self.cls[s] = if fl & flag::INDOOR != 0 {
+					cls::INDOOR
+				} else if fl & flag::STEEP != 0 {
+					cls::STEEP
+				} else {
+					cls::WALK
+				};
 			}
 		}
 		for i in 1..n.saturating_sub(1) {
 			if is_hop(self.cls[i - 1]) || is_hop(self.cls[i]) {
 				continue;
 			}
-			if let Some((_, z)) = surface(his[i][0], his[i][1], his[i][2]) {
+			if let Some((_, z, _)) = ours[i] {
 				self.pts[i][2] = z;
 			}
 		}
@@ -516,15 +529,15 @@ pub struct Baker<'a> {
 
 impl Baker<'_> {
 	/// The grid's open surface at (x, y) nearest height z (within GROUND_YD) -> its index in its column (the floor
-	/// grid ways carry), its height.
-	fn grid_surface(grid: &Grid, c: u32, x: f64, y: f64, z: f64) -> Option<(u8, f64)> {
+	/// grid ways carry), its height, its flags.
+	fn grid_surface(grid: &Grid, c: u32, x: f64, y: f64, z: f64) -> Option<(u8, f64, u8)> {
 		let (col, row, i, j) = cell_of(x, y);
 		let t = grid.tile(c, col, row)?;
 		let k = (j * TILE_CELLS as i64 + i) as usize;
 		let (a, b) = (*t.first.get(k)? as usize, *t.first.get(k + 1)? as usize);
 		(a..b)
 			.filter(|&e| t.flags[e] & flag::BLOCKED == 0)
-			.map(|e| ((e - a).min(255) as u8, t.z[e] as f64))
+			.map(|e| ((e - a).min(255) as u8, t.z[e] as f64, t.flags[e]))
 			.filter(|s| (s.1 - z).abs() <= GROUND_YD)
 			.min_by(|p, q| (p.1 - z).abs().total_cmp(&(q.1 - z).abs()))
 	}
@@ -612,16 +625,17 @@ mod tests {
 	// (the closure) has the stair as its column's surface 1, half a yard off his steps, and nothing under the far end.
 	#[test]
 	fn a_leffe_way_takes_our_grids_floors_and_heights_but_keeps_his_at_a_hop_and_where_ours_has_none() {
-		let mut w = way(&[[0.0, 0.0, 10.0], [10.0, 0.0, 12.0], [20.0, 0.0, 14.0], [25.0, 0.0, 4.0], [40.0, 0.0, 4.0]], &[cls::WALK, cls::WALK, cls::JUMP, cls::WALK]);
+		let mut w = way(&[[0.0, 0.0, 10.0], [10.0, 0.0, 12.0], [20.0, 0.0, 14.0], [25.0, 0.0, 4.0], [40.0, 0.0, 4.0]], &[cls::WALK, cls::STEEP, cls::JUMP, cls::WALK]);
 		w.floor = vec![3, 3, 3, 3];
-		w.onto_grid(|x, _, z| (x < 30.0).then_some((1, z + 0.5)));
+		w.onto_grid(|x, _, z| (x < 30.0).then_some((1, z + 0.5, if x < 5.0 { flag::INDOOR } else { flag::TERRAIN })));
 		assert_eq!(w.floor, vec![1, 1, 1, 1], "our grid's floor index for each segment's start");
+		assert_eq!(w.cls, vec![cls::INDOOR, cls::WALK, cls::JUMP, cls::WALK], "walks classed by our grid's ground (his steep slope is plain ground on ours), the jump kept");
 		let z: Vec<f64> = w.pts.iter().map(|p| p[2]).collect();
 		assert_eq!(z, vec![10.0, 12.5, 14.0, 4.0, 4.0], "the corner between walks re-heighted; the jump's ends and the way's ends keep his");
-		let mut far = way(&[[0.0, 0.0, 10.0], [40.0, 0.0, 12.0], [50.0, 0.0, 12.0]], &[cls::WALK, cls::WALK]);
+		let mut far = way(&[[0.0, 0.0, 10.0], [40.0, 0.0, 12.0], [50.0, 0.0, 12.0]], &[cls::WALK, cls::STEEP]);
 		far.floor = vec![3, 3];
-		far.onto_grid(|x, _, z| (x < 30.0).then_some((1, z + 0.5)));
-		assert_eq!((far.floor, far.pts[1][2]), (vec![1, 3], 12.0), "where ours has no surface near, his floor and height stay");
+		far.onto_grid(|x, _, z| (x < 30.0).then_some((1, z + 0.5, flag::TERRAIN)));
+		assert_eq!((far.floor, far.cls[1], far.pts[1][2]), (vec![1, 3], cls::STEEP, 12.0), "where ours has no surface near, his floor, class and height stay");
 	}
 
 	#[test]

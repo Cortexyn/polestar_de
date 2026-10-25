@@ -48,7 +48,7 @@ pub const WALKS_VERSION: &str = "walks-2";
 pub const ROUTES_VERSION: &str = "routes-8";
 pub const GUIDES_VERSION: &str = "guides-2";
 pub const REPORT_VERSION: &str = "report-2";
-pub const LEGS_VERSION: &str = "legs-3";
+pub const LEGS_VERSION: &str = "legs-4";
 /// The decode cache of Leffe's maps (MB): bounded memory per our measurements.
 pub const LEFFE_CACHE_MB: usize = 2048;
 
