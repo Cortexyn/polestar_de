@@ -157,15 +157,21 @@ pub fn walks(i: &WalksIn) -> Result<WalksOut, String> {
 		}
 		Nav::Hybrid { .. } | Nav::HybridSaved { .. } => unreachable!(),
 		Nav::LeffeSaved => {
-			let pack_id = store.leffe_pack().ok_or_else(|| format!("{}: no saved walks on Leffe's maps", i.store.display()))?;
+			let pack = store.leffe_pack().ok_or_else(|| format!("{}: no saved walks on Leffe's maps", i.store.display()))?;
 			let faction = match world.faction.as_str() {
 				"Horde" => Some("Horde"),
 				"Alliance" => Some("Alliance"),
 				_ => None,
 			};
 			let ends: Vec<crate::store::End> = world.points.iter().map(|p| crate::store::End::new(p.c as i32, p.x, p.y, p.z, p.z)).collect();
-			let be = crate::f4walks::SavedF4Backend::new(&store, pack_id, faction, &ends);
-			(i.log)(&format!("saved walks (pack {}), zones kept for {} of {} places; walks it lacks are our grid's", &be.pack_id[..12.min(be.pack_id.len())], be.zones_known(), ends.len()));
+			let be = crate::f4walks::SavedF4Backend::new(&store, pack, faction, &ends);
+			(i.log)(&format!(
+				"saved walks (pack {}, lift layer {}), zones kept for {} of {} places; walks it lacks are our grid's",
+				&be.pack_id[..12.min(be.pack_id.len())],
+				be.lifts,
+				be.zones_known(),
+				ends.len()
+			));
 			pool.install(|| {
 				let (d, s) = build_doc(&world, &ends, &mut store, &be, i.nav_fp, i.log, i.bands);
 				(d, s, be.smooth())

@@ -48,7 +48,7 @@ pub const WALKS_VERSION: &str = "walks-1";
 pub const ROUTES_VERSION: &str = "routes-8";
 pub const GUIDES_VERSION: &str = "guides-2";
 pub const REPORT_VERSION: &str = "report-2";
-pub const LEGS_VERSION: &str = "legs-1";
+pub const LEGS_VERSION: &str = "legs-2";
 /// The decode cache of Leffe's maps (MB): bounded memory per our measurements.
 pub const LEFFE_CACHE_MB: usize = 2048;
 
@@ -817,11 +817,16 @@ pub fn build(o: &BuildOpts, log: &mut dyn FnMut(&str)) -> Result<Vec<StageRun>, 
 	} else {
 		Vec::new()
 	};
+	// Leffe's lift layer, which may sit beside his pack folder (outside its manifest).
+	let walks_lifts = leffe.as_deref().filter(|_| nav != Nav::Grid).and_then(|p| forge_nav::f4::lifts::find(&if p.join("Nav.xml").exists() { p.to_path_buf() } else { p.join("Nav") }));
 	let mut parts: Vec<Part> = vec![Part::Text(&k_world)];
 	let nav_text = if o.walks_from.is_some() { "import".to_string() } else { format!("{nav:?}") };
 	parts.push(Part::Text(&nav_text));
 	if let (false, Some(p)) = (nav == Nav::Grid, &leffe) {
 		parts.push(Part::Manifest(p));
+	}
+	if let Some(f) = &walks_lifts {
+		parts.push(Part::File(f));
 	}
 	if !saved_stores.is_empty() {
 		parts.push(Part::Text("leffe-saved"));
@@ -1002,8 +1007,13 @@ pub fn build(o: &BuildOpts, log: &mut dyn FnMut(&str)) -> Result<Vec<StageRun>, 
 	let chokepoints = o.root.join("addon/Polestar_Nav/Nav/Chokepoints.lua");
 	let mut legs_parts = vec![Part::Text(&k_guides), Part::Text(&k_data), Part::Manifest(&l.grid), Part::File(&chokepoints)];
 	let leffe_for_legs = leffe.as_deref().filter(|_| nav != Nav::Grid);
+	// Leffe's lift layer, when it sits with his maps (forge_nav::f4::lifts::find).
+	let legs_lifts = leffe_for_legs.and_then(|p| forge_nav::f4::lifts::find(&if p.join("Nav.xml").exists() { p.to_path_buf() } else { p.join("Nav") }));
 	if let Some(p) = leffe_for_legs {
 		legs_parts.push(Part::Manifest(p));
+	}
+	if let Some(f) = &legs_lifts {
+		legs_parts.push(Part::File(f));
 	}
 	let k_legs = key("legs", LEGS_VERSION, &legs_parts);
 	runs.push(stage(&cache, "legs", k_legs, log, |log| {

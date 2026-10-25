@@ -304,9 +304,51 @@ tables are priced over it). `forge data pack` ships those stores. A build withou
   it lacks (a place new since the pack was built) has no answer from him, so the hybrid takes our
   grid's, exactly as when his maps have no way;
 - reads the store and never writes it, so a later build with his maps still asks him those walks;
-- uses the pack his store holds the most walks of (a store keeps older packs' walks too).
+- uses the pack and lift layer (below) his store holds the most walks of, at the current answer
+  version (a store keeps older packs' and versions' walks too).
 
 The legs stage needs his maps; without them the legs are drawn on our grid.
+
+### Lifts: Leffe's lift layer
+
+His walking graph has no lift edges on purpose. The lifts are a transport layer on top of it, as in
+Shortest Path Forever: **Leffe's lift layer**, a `lifts.json` (every lift car with both landings,
+found by the grid builder in the client's transport animations) and the reviewed lift rule of his
+travel planner. Forge splices it into his search (`forge_nav::f4::lifts`, credited to Leffe's lift
+layer):
+
+- **Where it is found.** `lift-layer/lifts.json` in the folder that holds `Nav/`, else in a
+  `lift-layer/` folder beside it (as in his handoff: the pack folder and `lift-layer/` side by side).
+  The build log says which file it used, or why it used none.
+- **Only on its own build.** The file names each landing by a cell of the grid that built the pack,
+  so Forge uses a layer only on that build: it knows each layer by its content (SHA-256) and the
+  grid build config it was found on, which must be the pack's `PACK.json` `grid.buildConfig`. Any
+  other layer or pack is refused (one log line, no lifts). A car whose landing does not stand on his
+  walkable surface (within 3 yd of its height) is left out.
+- **A ride is priced as our grid's.** Each car is one ride each way between its two landings:
+  15 s of wait and boarding plus 4 yd/s of shaft, as seconds × the run speed, times the multiplier
+  of the surface it lands on (a hostile hub, a dangerous zone). A landing joins his graph through
+  his own search from the entrances of its map piece, as a walk's ends do.
+- **The floor rule.** Thunder Bluff's bluff (uiMap 1456) and its ground (1412), the Undercity (1458)
+  and the Ruins of Lordaeron (1420) are joined only by their lifts (Leffe's reviewed rule). A walk
+  whose ends lie on opposite sides takes one: a way through an incidental entrance, the Undercity's
+  sewer pipe, never stands in. Thunder Bluff's walks may take either Mesa Elevator (every car of
+  both). The Undercity's take the **south Undervator only**: it is the in-game planner's one way in
+  and out (`undercity-south-lift`, Fitz, 2026-10-25), so walk times match what the player is made
+  to do; the east and west Undervators are left out of the walks.
+- **Sides.** A point of known height is inside when it is within 400 yd of one of the city's
+  shafts (or on its map) and on the city's side of its middle height: above 102 for the bluff,
+  below 7.45 for the Undercity. Walk ends carry no map of their own, and his zone layer gives the
+  Ruins' map over the whole Undercity, so the 400 yd footprint does the work: the Undercity's floors
+  reach 350 yd from its shafts, and no ground outside lies below its middle within 650 yd. A point of
+  unknown height over the footprint is on neither side (no rule); Tal's heightless flight path is on
+  the bluff. A car of the layer that would join a city's sides anywhere but at its shafts is left
+  out.
+- **Legs.** A baked leg over a lift has a segment of the lift move from landing to landing, as our
+  grid's legs do.
+
+Walks that no lift serves are answered exactly as without the layer: the landings sit on a heap of
+their own that the search takes from only when it is strictly cheaper.
 
 ### What they do well and what they lack
 
@@ -315,8 +357,9 @@ On our acceptance walks (cities, caves, buildings with several floors, choke poi
 - Where both find a way, his are usually a little longer: the median is about 1.03 times our
   yards, because he walks the ground's contour.
 - He finds coast and ridge paths our grid misses, and jumps and drops we lack.
-- His maps have **no lifts**. Thunder Bluff, Freewind Post, the Undercity and Gnomeregan are a long
-  detour or unreachable on them.
+- His walking graph has **no lifts** of its own; Forge splices them in from Leffe's lift layer
+  (above). Without the layer, Thunder Bluff's rises and the Undercity below the ruins are islands
+  or a sewer detour on his maps.
 - Some city parts are not joined to the rest: parts of Orgrimmar, Thunder Bluff's rises,
   Darnassus's upper tiers, Ironforge's Military Ward, and some caves.
 
@@ -335,8 +378,8 @@ The hybrid (`hybrid.rs`) works on whole walks:
 1. Both backends build a full walks file for the same world, each from its own store.
 2. The two files are merged walk by walk.
 
-It does not splice our lifts into his graph. A walk his maps cannot do well is taken entirely from
-our grid.
+It does not splice our grid's lifts or links into his graph; his lifts come from Leffe's lift
+layer. A walk his maps cannot do well is taken entirely from our grid.
 
 Both cost models price a yard about the same on the acceptance walks, so the costs can be compared
 directly. Most base walks come from Leffe's maps; the rest come from our grid, either because his

@@ -65,7 +65,7 @@ fn is_hop(c: u8) -> bool {
 	matches!(c, cls::JUMP | cls::FALL | cls::CLIMB | cls::LIFT)
 }
 
-/// The move of a format-4 motion arc as a segment class.
+/// The move of a format-4 motion arc (or a ride on Leffe's lift layer) as a segment class.
 pub fn move_class(m: Move) -> u8 {
 	match m {
 		Move::Walk | Move::Motion => cls::WALK,
@@ -73,6 +73,7 @@ pub fn move_class(m: Move) -> u8 {
 		Move::Jump => cls::JUMP,
 		Move::Drop => cls::FALL,
 		Move::Climb => cls::CLIMB,
+		Move::Lift => cls::LIFT,
 	}
 }
 
