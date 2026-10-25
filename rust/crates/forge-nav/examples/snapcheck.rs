@@ -22,7 +22,9 @@ fn main() -> Result<(), String> {
 	}
 	let grid = Arc::new(Grid::open(Path::new(&a[0]), 640)?);
 	let walker = Walker::new(grid.clone());
-	let lines = |f: &str| -> Result<Vec<Value>, String> { Ok(std::fs::read_to_string(f).map_err(|e| e.to_string())?.lines().filter(|l| !l.trim().is_empty()).map(|l| serde_json::from_str(l).unwrap()).collect()) };
+	let lines = |f: &str| -> Result<Vec<Value>, String> {
+		Ok(std::fs::read_to_string(f).map_err(|e| e.to_string())?.lines().filter(|l| !l.trim().is_empty()).map(|l| serde_json::from_str(l).unwrap()).collect())
+	};
 	let walks = lines(&a[1])?;
 	let follow = lines(&a[2])?;
 	let (mut all_multi, mut all_wrong) = (0usize, 0usize);

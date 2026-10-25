@@ -38,11 +38,19 @@ fn main() -> Result<(), String> {
 					continue;
 				}
 				let f = t.flags[e];
-				let fl: String = [(flag::TERRAIN, 'T'), (flag::WMO, 'W'), (flag::M2, 'M'), (flag::INDOOR, 'I'), (flag::SWIM, 'S'), (flag::OCEAN, 'O'), (flag::STEEP, '^'), (flag::BLOCKED, 'X')].iter().filter(|x| f & x.0 != 0).map(|x| x.1).collect();
+				let fl: String = [(flag::TERRAIN, 'T'), (flag::WMO, 'W'), (flag::M2, 'M'), (flag::INDOOR, 'I'), (flag::SWIM, 'S'), (flag::OCEAN, 'O'), (flag::STEEP, '^'), (flag::BLOCKED, 'X')]
+					.iter()
+					.filter(|x| f & x.0 != 0)
+					.map(|x| x.1)
+					.collect();
 				let links: Vec<String> = (0..8)
 					.map(|d| {
 						let b = if t.links.is_empty() { NO_LINK } else { t.links[e * 8 + d] };
-						if b == NO_LINK { format!("{}:-", names[d]) } else { format!("{}:{}{}", names[d], cls[(b >> 5) as usize], b & 31) }
+						if b == NO_LINK {
+							format!("{}:-", names[d])
+						} else {
+							format!("{}:{}{}", names[d], cls[(b >> 5) as usize], b & 31)
+						}
 					})
 					.collect();
 				println!(

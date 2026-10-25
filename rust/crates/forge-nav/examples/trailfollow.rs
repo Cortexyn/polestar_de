@@ -122,7 +122,10 @@ fn main() -> Result<(), String> {
 		let mut zs: Vec<Option<f32>> = vec![None; cells.len()];
 		let seed = |m: usize, zref: Option<&[f32]>| -> Vec<Node> {
 			let col = g.column(cells[m].0, cells[m].1);
-			(0..col.len() as u32).filter(|&l| usable(&col[l as usize]) && zref.is_none_or(|zr| zr.iter().any(|z| (col[l as usize].0 - z).abs() as f64 <= RESEED))).map(|l| (cells[m].0, cells[m].1, l)).collect()
+			(0..col.len() as u32)
+				.filter(|&l| usable(&col[l as usize]) && zref.is_none_or(|zr| zr.iter().any(|z| (col[l as usize].0 - z).abs() as f64 <= RESEED)))
+				.map(|l| (cells[m].0, cells[m].1, l))
+				.collect()
 		};
 		let mut n = 0;
 		let mut s: Vec<Node> = seed(0, None);
@@ -180,7 +183,9 @@ fn main() -> Result<(), String> {
 				None => {
 					let zf = zof(&s);
 					let nx = cells[n + 1];
-					let desc = |c: &[(f32, f32, u8, u8)]| -> Value { c.iter().map(|x| json!([(x.0 * 10.0).round() / 10.0, if x.1.is_finite() { json!((x.1 * 10.0).round() / 10.0) } else { Value::Null }, x.2, x.3])).collect() };
+					let desc = |c: &[(f32, f32, u8, u8)]| -> Value {
+						c.iter().map(|x| json!([(x.0 * 10.0).round() / 10.0, if x.1.is_finite() { json!((x.1 * 10.0).round() / 10.0) } else { Value::Null }, x.2, x.3])).collect()
+					};
 					let here: FxHashSet<u32> = s.iter().filter(|x| (x.0, x.1) == cells[n]).map(|x| x.2).collect();
 					breaks.push(json!({
 						"at": n, "wx": (at[n].0 * 10.0).round() / 10.0, "wy": (at[n].1 * 10.0).round() / 10.0,
