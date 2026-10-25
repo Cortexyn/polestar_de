@@ -42,12 +42,14 @@ end
 -- C_EncodingUtil's DecodeBase64 or DecompressString (the engine would raise
 -- a Lua error decoding the first cluster). Path.HasData is then false for
 -- that map and Polestar's arrow points straight. A part's bytes are not
--- checked here: the shipped files are pinned by sha256.
+-- checked here: the shipped files are pinned by sha256. A map whose parts ship in
+-- their own load-on-demand addon (D.part, maps format 5) is checked the same
+-- way once that addon loads (Routing/PathGrid.lua EnsurePart).
 local enc = C_EncodingUtil
 local decodes = type(enc) == "table" and type(enc.DecodeBase64) == "function" and type(enc.DecompressString) == "function"
 for map, D in pairs(type(PolestarPathData) == "table" and PolestarPathData or {}) do
 	local whole = decodes and type(D) == "table"
-	if whole and type(D.packed) == "table" and type(D.counts) == "table" then
+	if whole and not D.part and type(D.packed) == "table" and type(D.counts) == "table" then
 		for field, want in pairs(D.counts) do
 			local n = 0
 			for _ in pairs(D.packed[field] or {}) do

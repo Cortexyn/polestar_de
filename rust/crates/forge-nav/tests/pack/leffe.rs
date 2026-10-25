@@ -27,6 +27,7 @@ fn pack(leffe: Option<(&std::path::Path, &[u32])>, name: &str) -> PathBuf {
 		continents: &[2991],
 		generator: "forge nav pack",
 		leffe,
+		zlib_literals: true,
 		log: &|m| eprintln!("{m}"),
 	})
 	.unwrap();
@@ -43,17 +44,23 @@ fn leffe_zephras_packs_his_maps_as_format_5_and_naming_no_map_of_his_packs_the_g
 	let meta = std::fs::read_to_string(his.join("Nav/Nav2991.lua")).unwrap();
 	assert!(meta.lines().any(|l| l == "\tformat = 5,"), "maps format 5");
 	assert!(meta.lines().any(|l| l == "\tarc = {},"), "the arc field");
+	assert!(meta.lines().any(|l| l == "\tblocks = \"zlib\","), "the blocks as zlib bytes");
 	assert!(meta.lines().next().unwrap().contains("--leffe` from the navigation grid") && meta.lines().next().unwrap().contains("and Leffe's navigation maps on 2026-10-25."), "the header credits his maps");
 	let manifest: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(his.join("PACK.json")).unwrap()).unwrap();
 	assert_eq!(manifest["format"], 5);
 	let m = &manifest["maps"]["2991"];
 	// His Zephras Isle (PACK.json of the 70532 candidate): 4,890 entrances, 164,403 floors, 47,951 directed jumps.
 	assert_eq!(m["nodes"], 4890, "every entrance of his graph");
-	assert_eq!(m["leffe"]["floors"], 164403, "every floor of his");
+	let (kept, dropped) = (m["leffe"]["floors"].as_u64().unwrap(), m["leffe"]["droppedFloors"].as_u64().unwrap());
+	assert_eq!(kept + dropped, 164403, "every floor of his, kept or dropped as no walk can use it");
+	assert!(dropped > 20000 && dropped < 40000, "about a fifth dropped: {dropped}");
 	assert!(m["leffe"]["arcs"].as_u64().unwrap() > 20000, "his jumps and drops as arcs: {}", m["leffe"]["arcs"]);
 	assert!(m["leffe"]["areaSurfaces"].as_u64().unwrap() > 10000, "areas carried onto his surfaces");
-	let parts: String = files_under(&his.join("Nav")).iter().filter(|f| f.starts_with("Nav2991_")).map(|f| std::fs::read_to_string(his.join("Nav").join(f)).unwrap()).collect();
-	assert!(parts.contains("data.packed.arc["), "arcs packed");
+	let parts: Vec<u8> = files_under(&his.join("Nav")).iter().filter(|f| f.starts_with("Nav2991_")).flat_map(|f| std::fs::read(his.join("Nav").join(f)).unwrap()).collect();
+	let text = String::from_utf8_lossy(&parts);
+	assert!(text.contains("data.packed.arc["), "arcs packed");
+	assert!(parts.iter().any(|&b| b >= 0x80) && !text.contains("{\"eNo"), "zlib bytes in the literals, not base64 (zlib's header in base64 starts eNo)");
+	assert!(forge_nav::pack::check_pack(&his).is_empty(), "nav check: {:?}", forge_nav::pack::check_pack(&his));
 	// --leffe-maps without this map: the grid's maps, byte for byte.
 	let ours = pack(Some((&leffe, &[])), "leffe-none");
 	let grid = pack(None, "grid");

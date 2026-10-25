@@ -534,8 +534,10 @@ const RELEASE_DATA_ADDONS = [
 // -> { names, skipped }: the release addons present under addonsDir, in load order.
 function releaseAddons(addonsDir) {
 	const skipped = RELEASE_DATA_ADDONS.filter((n) => !fs.existsSync(path.join(addonsDir, n, `${n}.toc`)));
-	// Our pack's faction parts and race parts (forge guide compile, format 8), each once built.
-	const parts = ['Alliance', 'Horde', ...RACE_FILES].map((r) => partAddon(OWN_FOLDER, r)).filter((n) => fs.existsSync(path.join(addonsDir, n, `${n}.toc`)));
+	// The walking maps' part addons (forge nav pack --leffe), then our pack's faction parts and race parts (forge
+	// guide compile, format 8), each once built (as forge-release's release_addons).
+	const navParts = ['Polestar_Nav_EK', 'Polestar_Nav_Kalimdor'];
+	const parts = [...navParts, ...['Alliance', 'Horde', ...RACE_FILES].map((r) => partAddon(OWN_FOLDER, r))].filter((n) => fs.existsSync(path.join(addonsDir, n, `${n}.toc`)));
 	return { names: [...RELEASE_ADDONS, ...parts, ...RELEASE_DATA_ADDONS.filter((n) => !skipped.includes(n))], skipped };
 }
 

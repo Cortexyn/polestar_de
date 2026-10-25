@@ -39,15 +39,23 @@
 -- Packed (pack_nav.py's layout): data.packed.<field>[k + 1] = { base64(zlib(16 KB block)), ... } in the parts.
 -- Format 5: Leffe's navigation maps (forge nav pack --leffe): his surfaces, floors, classes and zones in the fields
 --   above, his entrance graph in the graph field (an entrance lists only the edges it can walk: some are one way),
---   and arc[k + 1]: the cluster's one-way jumps and drops, n(3) | n x [from node(3) to node(3) yards * 4(2)] by
---   from node; a search steps along one like a grid step of that length, a search out of the goal backwards.
+--   and arc[k + 1]: the cluster's one-way jumps and drops; a search steps along one like a grid step of that length,
+--   a search out of the goal backwards. Format 5's floor and arc fields are columns of numbers, each base 32 in
+--   symbols (5 bits a symbol, low first; a symbol >= 32: another follows) or fixed symbols (width in brackets),
+--   zigzag numbers 0, 1, 2, 3, ... for 0, -1, 1, -2, ...: floor n | n cell gaps (cell - previous - 1, from -1) |
+--   n counts (1) | the floors' values (1) | their heights (zigzag, against the floor below in the cell, a cell's
+--   first against the previous cell's first, from 0) | their steps (2) | m | m link nodes (zigzag, against the
+--   previous link's, from 0) | m directions (1) | m layers (1); arc n | n from-node gaps (from 0, by from node) |
+--   n to-nodes (zigzag, against the from node) | n yards * 4.
 PolestarPathData = PolestarPathData or {}
 
 ---@type SPFNavData
 -- stylua: ignore
 PolestarPathData[0] = {
 	format = 5,
+	blocks = "zlib",
 	profiles = { "Alliance", "Horde" },
+	part = "Polestar_Nav_EK",
 	cx0 = -30,
 	cy0 = -14,
 	nx = 42,
@@ -738,8 +746,6 @@ PolestarPathData[0] = {
 		[18200] = "Agamand Family Crypt",
 		[18201] = "Agamand Family Crypt",
 		[18202] = "Agamand Family Crypt",
-		[18203] = "Agamand Family Crypt",
-		[18204] = "Agamand Family Crypt",
 		[18207] = "Agamand Family Crypt",
 		[18209] = "Night Web's Hollow",
 		[18210] = "Night Web's Hollow",
@@ -1614,7 +1620,6 @@ PolestarPathData[0] = {
 		[33505] = "Sorrow Hill",
 		[33506] = "Sorrow Hill",
 		[33507] = "Sorrow Hill",
-		[33509] = "Sorrow Hill",
 		[33510] = "Sorrow Hill",
 		[33511] = "Sorrow Hill",
 		[33512] = "Sorrow Hill",

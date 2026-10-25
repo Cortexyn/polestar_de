@@ -5,7 +5,8 @@
 //!
 //! His cell fields (grid, height, floor, class, zone) already are the in-game encodings and pass through, except the
 //! few steps his flags leave open past the walkable slope (his reader closes them; ours reads only the flags), which
-//! are closed here. What changes:
+//! are closed here, and the floors no walk can use, which are dropped (`isolated`). What changes:
+//! - **floor**: his records as format 5's columns (`floor_columns`): half the bytes after zlib.
 //! - **arc**: at the in-game cell size every arc of his motion stream is a step inside one surface, a step his cells
 //!   already make, a jump (kind 1), or a drop or climb (kind 0 rising or falling past the walkable slope), each to the
 //!   same or a neighbouring cell. The jumps, drops and climbs inside a cluster become its arc field (one way, between
@@ -17,7 +18,7 @@
 
 use super::cells::{CellGrid, ZQ};
 use super::encode::{encode_areas, run_length, Maps, COST_MAX, YARDS_MAX};
-use super::{enc, js_round, B64, NONE};
+use super::{b32, enc, js_round, zigzag, B64, NONE};
 use crate::f4::pack::{self, Assembly, Cluster, Graph, Meta, Span, TILE, WALK_TAN};
 use crate::f4::{NavDir, PackSource};
 use rayon::prelude::*;
@@ -37,7 +38,8 @@ pub struct LeffeStats {
 	pub floors: usize,
 	pub entrances: usize,
 	pub edges: usize,
-	pub oneway: usize,
+	/// Floors no walk can use, dropped (isolated).
+	pub dropped_floors: usize,
 	/// Edges past an entrance's 63 (the most costly dropped).
 	pub dropped: usize,
 	pub jumps: usize,
@@ -71,15 +73,6 @@ fn owner(c: &Cluster, node: usize) -> usize {
 	} else {
 		node
 	}
-}
-
-/// (local cell, layer) of a surface node: layer 0 the base, i the cell's ith floor.
-fn cell_layer(c: &Cluster, cc: usize, o: usize) -> (usize, usize) {
-	if o < cc * cc {
-		return (o, 0);
-	}
-	let lc = c.at_cell[o] as usize;
-	(lc, o - c.first_floor[lc] as usize + 1)
 }
 
 /// The area of our surface in global cell (gx, gy) nearest height z, 0 for none within MATCH_YD.
@@ -165,6 +158,191 @@ fn close_steep(meta: &Meta, c: &Cluster, s: &str) -> Result<(String, usize), Str
 	Ok((if closed == 0 { s.to_string() } else { run_length(&vals) }, closed))
 }
 
+/// Floors no walk can use: no step or link out of them, none into them from the cluster's surfaces, no jump, drop or
+/// entrance at them, and not on the cluster's border (where a neighbour's links may land). About a fifth of his
+/// floors; a player standing on one is snapped to a surface beside it as on any spot the maps lack.
+fn isolated(meta: &Meta, c: &Cluster, g: &Graph) -> Vec<bool> {
+	let cc = meta.c as i64;
+	let n2 = (cc * cc) as usize;
+	let mut used = vec![false; c.n0];
+	for r in 0..g.rows {
+		used[owner(c, g.row_node[r] as usize)] = true;
+	}
+	for a in 0..c.a_from.len() {
+		for o in [owner(c, c.a_from[a] as usize)].into_iter().chain((c.a_dx[a] == 0 && c.a_dy[a] == 0).then(|| owner(c, c.a_to[a] as usize))) {
+			if o < c.n0 {
+				used[o] = true;
+			}
+		}
+	}
+	for u in 0..c.n0 {
+		let lc = if u < n2 { u as i64 } else { c.at_cell[u] as i64 };
+		for e in c.link_off[u] as usize..c.link_off[u + 1] as usize {
+			let l = c.link_val[e] as usize;
+			let (tx, ty) = (lc / cc + pack::DX[l % 8], lc % cc + pack::DY[l % 8]);
+			if tx < 0 || ty < 0 || tx >= cc || ty >= cc {
+				continue;
+			}
+			let t = (tx * cc + ty) as usize;
+			let layer = (l / 8) as i64 - 1;
+			let first = c.first_floor[t] as i64;
+			let target = if layer > 0 {
+				Some((first + layer - 1) as usize).filter(|_| first >= 0)
+			} else if layer < 0 {
+				let h = c.z[u];
+				let mut best = (None, if c.val[t] != 0 { (c.z[t] - h).abs() } else { f32::INFINITY });
+				let mut f = first;
+				while f >= 0 && (f as usize) < c.n0 && c.at_cell[f as usize] as usize == t {
+					let d = (c.z[f as usize] - h).abs();
+					if d < best.1 {
+						best = (Some(f as usize), d);
+					}
+					f += 1;
+				}
+				best.0
+			} else {
+				None
+			};
+			if let Some(t) = target.filter(|&t| t >= n2 && t < c.n0) {
+				used[t] = true;
+			}
+		}
+	}
+	(0..c.n0)
+		.map(|f| {
+			if f < n2 || used[f] || c.link_off[f + 1] > c.link_off[f] {
+				return false;
+			}
+			let lc = c.at_cell[f] as i64;
+			let (x, y) = (lc / cc, lc % cc);
+			x > 0 && y > 0 && x < cc - 1 && y < cc - 1
+		})
+		.collect()
+}
+
+/// His floor field (rows: n(3) | n x [cell(3) count(1) count x [value(1) height + 2048(2) steps(2)]] | m(3) | m x
+/// [node(3) direction(1) layer(1)]) without the `dead` floors, as format 5's columns: their records gone, the floors
+/// after them renumbered, and an explicit link's layer in this cluster lowered by the dead floors under it in its
+/// cell (links across the border land on border cells, where nothing is dropped). The columns, each a run of b32
+/// numbers or fixed symbols: n | n cell gaps (cell - previous cell - 1, from -1) | n counts (1) | the floors' values
+/// (1) | their heights (zigzag: against the floor below in the cell, a cell's first against the previous cell's
+/// first, from 0) | their steps (2) | m | m link nodes (zigzag against the previous link's, from 0) | m directions
+/// (1) | m layers (1). Half the bytes of the rows after zlib: like values sit together.
+fn floor_columns(s: &str, cc: usize, dead: &[bool]) -> Result<String, String> {
+	let b = s.as_bytes();
+	let num = |i: usize, w: usize| -> usize { (0..w).fold(0, |v, j| v * 64 + pack::B64[b[i + j] as usize] as usize) };
+	let n2 = cc * cc;
+	let mut p = 3;
+	let mut cells: Vec<(usize, Vec<(usize, usize, i64, usize)>)> = Vec::new(); // (cell, [(old node, val, z, steps)])
+	let mut node = n2;
+	let mut cell_of: Vec<usize> = Vec::new(); // a floor node's cell, by node - n2
+	for _ in 0..num(0, 3) {
+		let (cell, count) = (num(p, 3), num(p + 3, 1));
+		p += 4;
+		let mut fl = Vec::with_capacity(count);
+		for _ in 0..count {
+			fl.push((node, num(p, 1), num(p + 1, 2) as i64 - 2048, num(p + 3, 2)));
+			cell_of.push(cell);
+			p += 5;
+			node += 1;
+		}
+		cells.push((cell, fl));
+	}
+	let dead = |n: usize| dead.get(n).copied().unwrap_or(false);
+	// old node -> new node; per cell, its dead floors' old layers
+	let mut renum = vec![0usize; node];
+	let mut next = n2;
+	let mut dead_layers: FxHashMap<usize, Vec<usize>> = FxHashMap::default();
+	for (cell, fl) in &mut cells {
+		for (i, f) in fl.iter().enumerate() {
+			if dead(f.0) {
+				dead_layers.entry(*cell).or_default().push(i + 1);
+			} else {
+				renum[f.0] = next;
+				next += 1;
+			}
+		}
+		fl.retain(|f| !dead(f.0));
+	}
+	cells.retain(|(_, fl)| !fl.is_empty());
+	let mut out = String::new();
+	b32(cells.len() as u64, &mut out);
+	let mut last = -1i64;
+	for (cell, _) in &cells {
+		b32((*cell as i64 - last - 1) as u64, &mut out);
+		last = *cell as i64;
+	}
+	for (_, fl) in &cells {
+		out.push_str(&enc(fl.len() as f64, 1)?);
+	}
+	for f in cells.iter().flat_map(|(_, fl)| fl) {
+		out.push_str(&enc(f.1 as f64, 1)?);
+	}
+	let mut first = 0;
+	for (_, fl) in &cells {
+		let mut below = first;
+		for (i, f) in fl.iter().enumerate() {
+			b32(zigzag(f.2 - below), &mut out);
+			if i == 0 {
+				first = f.2;
+			}
+			below = f.2;
+		}
+	}
+	for f in cells.iter().flat_map(|(_, fl)| fl) {
+		out.push_str(&enc(f.3 as f64, 2)?);
+	}
+	let m = num(p, 3);
+	p += 3;
+	let mut links = Vec::with_capacity(m);
+	for _ in 0..m {
+		let (u, d, layer) = (num(p, 3), num(p + 3, 1), num(p + 4, 1));
+		p += 5;
+		let lc = if u < n2 { u } else { cell_of[u - n2] };
+		let (tx, ty) = ((lc / cc) as i64 + pack::DX[d], (lc % cc) as i64 + pack::DY[d]);
+		let mut layer2 = layer;
+		if layer > 0 && tx >= 0 && ty >= 0 && tx < cc as i64 && ty < cc as i64 {
+			let t = (tx as usize) * cc + ty as usize;
+			layer2 -= dead_layers.get(&t).map_or(0, |v| v.iter().filter(|&&l| l < layer).count());
+		}
+		links.push((if u < n2 { u } else { renum[u] }, d, layer2));
+	}
+	if p != b.len() {
+		return Err(format!("leffe: floor field has {} symbols past its records", b.len() - p));
+	}
+	b32(m as u64, &mut out);
+	let mut prev = 0i64;
+	for &(u, _, _) in &links {
+		b32(zigzag(u as i64 - prev), &mut out);
+		prev = u as i64;
+	}
+	for &(_, d, _) in &links {
+		out.push_str(&enc(d as f64, 1)?);
+	}
+	for &(_, _, layer) in &links {
+		out.push_str(&enc(layer as f64, 1)?);
+	}
+	Ok(out)
+}
+
+/// His class field (per node, run-length; missing tail 0) without the `dead` nodes.
+fn drop_classes(s: &str, n0: usize, dead: &[bool]) -> String {
+	let mut v: Vec<u8> = Vec::with_capacity(n0);
+	let mut last = 0u8;
+	for &ch in s.as_bytes() {
+		let sym = pack::B64[ch as usize] as u8;
+		if sym < 48 {
+			last = sym;
+			v.push(last);
+		} else {
+			v.extend(std::iter::repeat_n(last, (sym - 47) as usize));
+		}
+	}
+	v.resize(n0, 0);
+	let kept: Vec<u8> = v.iter().zip(dead).filter(|(_, &d)| !d).map(|(&x, _)| x).collect();
+	run_length(&kept)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn cluster(meta: &Meta, k: u32, c: &Cluster, g: &Graph, fields: &FxHashMap<&str, String>, cg: &CellGrid, has: &dyn Fn(u32) -> bool, layers: &FxHashMap<u32, Vec<u8>>) -> Result<Out, String> {
 	let cc = meta.c as usize;
@@ -174,27 +352,43 @@ fn cluster(meta: &Meta, k: u32, c: &Cluster, g: &Graph, fields: &FxHashMap<&str,
 	o.stats.closed = closed;
 	o.grid = Some(grid);
 	o.height = fields.get("height").cloned();
-	o.floor = fields.get("floor").cloned();
-	o.class = fields.get("class").cloned();
+	// The floors no walk can use are dropped; every node after one moves down.
+	let dead = isolated(meta, c, g);
+	o.stats.dropped_floors = dead.iter().filter(|&&d| d).count();
+	let mut renum = vec![u32::MAX; c.n0];
+	let mut layer_of = vec![0usize; c.n0];
+	let mut next = 0u32;
+	let mut run = (usize::MAX, 0usize);
+	for node in 0..c.n0 {
+		if dead[node] {
+			continue;
+		}
+		renum[node] = next;
+		next += 1;
+		if node >= n2 {
+			let cell = c.at_cell[node] as usize;
+			run = if run.0 == cell { (cell, run.1 + 1) } else { (cell, 1) };
+			layer_of[node] = run.1;
+		}
+	}
+	o.floor = fields.get("floor").map(|f| floor_columns(f, cc, &dead)).transpose()?;
+	o.class = fields.get("class").map(|s| if o.stats.dropped_floors > 0 { drop_classes(s, c.n0, &dead) } else { s.clone() });
 	o.stats.clusters = 1;
-	o.stats.floors = c.n0 - n2;
+	o.stats.floors = c.n0 - n2 - o.stats.dropped_floors;
 	// area: per surface, ours in the same cell nearest in height
 	let (kx, ky) = (k as i64 / meta.ny, k as i64 % meta.ny);
-	let mut av = vec![0u32; c.n0];
-	for (node, a) in av.iter_mut().enumerate() {
-		let lc = if node < n2 {
-			if c.val[node] == 0 {
-				continue;
-			}
-			node
-		} else {
-			c.at_cell[node] as usize
-		};
-		*a = our_area(cg, kx * cc as i64 + (lc / cc) as i64, ky * cc as i64 + (lc % cc) as i64, c.z[node] as f64);
-		if *a != 0 {
-			o.areas.insert(*a);
+	let mut av = Vec::with_capacity(c.n0);
+	for node in 0..c.n0 {
+		if dead[node] {
+			continue;
+		}
+		let lc = if node < n2 { node } else { c.at_cell[node] as usize };
+		let a = if node < n2 && c.val[node] == 0 { 0 } else { our_area(cg, kx * cc as i64 + (lc / cc) as i64, ky * cc as i64 + (lc % cc) as i64, c.z[node] as f64) };
+		if a != 0 {
+			o.areas.insert(a);
 			o.stats.areas += 1;
 		}
+		av.push(a);
 	}
 	if av.iter().any(|&a| a != 0) {
 		o.area = Some(encode_areas(&av)?);
@@ -225,18 +419,28 @@ fn cluster(meta: &Meta, k: u32, c: &Cluster, g: &Graph, fields: &FxHashMap<&str,
 		if fa == fb || fa >= c.n0 || fb >= c.n0 {
 			continue;
 		}
+		let (fa, fb) = (renum[fa] as usize, renum[fb] as usize);
 		let y = c.a_yards[a] as f64;
 		let e = arcs.entry((fa, fb)).or_insert(y);
 		if y < *e {
 			*e = y;
 		}
 	}
+	// As columns (b32, see floor_columns): n | n from gaps (from - previous from, from 0) | n ends (zigzag: to - from) |
+	// n yards * 4.
 	if !arcs.is_empty() {
-		let mut s = enc(arcs.len() as f64, 3)?;
-		for (&(a, b), &y) in &arcs {
-			s.push_str(&enc(a as f64, 3)?);
-			s.push_str(&enc(b as f64, 3)?);
-			s.push_str(&enc(js_round(y * 4.0).clamp(1.0, YARDS_MAX), 2)?);
+		let mut s = String::new();
+		b32(arcs.len() as u64, &mut s);
+		let mut last = 0;
+		for &(a, _) in arcs.keys() {
+			b32((a - last) as u64, &mut s);
+			last = a;
+		}
+		for &(a, b) in arcs.keys() {
+			b32(zigzag(b as i64 - a as i64), &mut s);
+		}
+		for &y in arcs.values() {
+			b32(js_round(y * 4.0).clamp(1.0, YARDS_MAX) as u64, &mut s);
 		}
 		o.stats.arcs = arcs.len();
 		o.arc = Some(s);
@@ -249,7 +453,8 @@ fn cluster(meta: &Meta, k: u32, c: &Cluster, g: &Graph, fields: &FxHashMap<&str,
 		let mut rec = enc(g.rows as f64, 2)?;
 		let mut erec = String::new();
 		for r in 0..g.rows {
-			let (lc, layer) = cell_layer(c, cc, owner(c, g.row_node[r] as usize));
+			let o0 = owner(c, g.row_node[r] as usize);
+			let (lc, layer) = if o0 < n2 { (o0, 0) } else { (c.at_cell[o0] as usize, layer_of[o0]) };
 			if layer >= 64 {
 				return Err(format!("leffe: cluster {k} entrance {r} on floor {layer} (at most 63)"));
 			}
@@ -383,6 +588,7 @@ pub fn leffe_maps(dir: &Path, map: u32, cg: &CellGrid) -> Result<(Maps, BTreeSet
 		st.entrances += s.entrances;
 		st.edges += s.edges;
 		st.dropped += s.dropped;
+		st.dropped_floors += s.dropped_floors;
 		st.jumps += s.jumps;
 		st.drops += s.drops;
 		st.climbs += s.climbs;

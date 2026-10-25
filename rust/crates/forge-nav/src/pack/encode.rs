@@ -470,8 +470,14 @@ pub const ARC_FIELDS: [&str; 7] = ["graph", "grid", "height", "floor", "class", 
 const ARC_HEADER: &[&str] = &[
 	"-- Format 5: Leffe's navigation maps (forge nav pack --leffe): his surfaces, floors, classes and zones in the fields",
 	"--   above, his entrance graph in the graph field (an entrance lists only the edges it can walk: some are one way),",
-	"--   and arc[k + 1]: the cluster's one-way jumps and drops, n(3) | n x [from node(3) to node(3) yards * 4(2)] by",
-	"--   from node; a search steps along one like a grid step of that length, a search out of the goal backwards.",
+	"--   and arc[k + 1]: the cluster's one-way jumps and drops; a search steps along one like a grid step of that length,",
+	"--   a search out of the goal backwards. Format 5's floor and arc fields are columns of numbers, each base 32 in",
+	"--   symbols (5 bits a symbol, low first; a symbol >= 32: another follows) or fixed symbols (width in brackets),",
+	"--   zigzag numbers 0, 1, 2, 3, ... for 0, -1, 1, -2, ...: floor n | n cell gaps (cell - previous - 1, from -1) |",
+	"--   n counts (1) | the floors' values (1) | their heights (zigzag, against the floor below in the cell, a cell's",
+	"--   first against the previous cell's first, from 0) | their steps (2) | m | m link nodes (zigzag, against the",
+	"--   previous link's, from 0) | m directions (1) | m layers (1); arc n | n from-node gaps (from 0, by from node) |",
+	"--   n to-nodes (zigzag, against the from node) | n yards * 4.",
 ];
 const PART_NOTE: &str = "-- Compressed terrain for on-demand decoding (Shortest Path Forever's pack_nav.py layout).";
 const CREDIT: &[&str] = &[
@@ -518,8 +524,10 @@ pub fn block(raw: &[u8]) -> String {
 
 /// pack.js packFiles: one map's strings -> its metadata file and parts. `gen` is the
 /// generated-file header line; `area_names` the grid's areas.json ({ id: [name, AreaTableID] }),
-/// naming the rows of a format 3 map's area field. -> (files, packed bytes)
-pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str, hubs: &[Hub], area_names: Option<&serde_json::Value>) -> Result<(Vec<(String, String)>, usize), String> {
+/// naming the rows of a format 3 map's area field; `addon` the load-on-demand addon the parts ship in (their names
+/// then `<addon>/Nav<map>_<n>.lua`, and the metadata names it: `part = "<addon>"`). -> (files, packed bytes)
+#[allow(clippy::too_many_arguments)]
+pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str, hubs: &[Hub], area_names: Option<&serde_json::Value>, addon: Option<&str>) -> Result<(Vec<(String, String)>, usize), String> {
 	let mut files = Vec::new();
 	let classed = maps.class.is_some();
 	let areaed = classed && maps.area.is_some();
@@ -548,6 +556,9 @@ pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str,
 	if classed {
 		meta.push(format!("\tformat = {},", if maps.arc.is_some() && areaed { 5 } else if areaed { 3 } else { 2 }));
 		meta.push("\tprofiles = { \"Alliance\", \"Horde\" },".into());
+		if let Some(a) = addon {
+			meta.push(format!("\tpart = {},", lua_str(a)));
+		}
 	}
 	meta.push(format!("\tcx0 = {},", cg.cx0));
 	meta.push(format!("\tcy0 = {},", cg.cy0));
@@ -597,6 +608,7 @@ pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str,
 	files.push((format!("Nav{map}.lua"), meta.join("\n")));
 	let header = format!("{gen}\n{PART_NOTE}\n---@type SPFNavData\nlocal data = {global}[{map}]\n-- stylua: ignore start\n");
 	let mut part = 1;
+	let folder = addon.map_or(String::new(), |a| format!("{a}/"));
 	let mut content = header.clone();
 	let mut keys: Vec<u32> = fields.iter().flat_map(|f| maps.field(f).keys().copied()).collect();
 	keys.sort_unstable();
@@ -619,14 +631,14 @@ pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str,
 				return Err(format!("pack: map {map} cluster {k} exceeds the part limit"));
 			}
 			if content.len() + line.len() + 32 > PART_BYTES {
-				files.push((format!("Nav{map}_{part}.lua"), format!("{content}-- stylua: ignore end\n")));
+				files.push((format!("{folder}Nav{map}_{part}.lua"), format!("{content}-- stylua: ignore end\n")));
 				part += 1;
 				content = header.clone();
 			}
 			content.push_str(&line);
 		}
 	}
-	files.push((format!("Nav{map}_{part}.lua"), format!("{content}-- stylua: ignore end\n")));
+	files.push((format!("{folder}Nav{map}_{part}.lua"), format!("{content}-- stylua: ignore end\n")));
 	Ok((files, packed_bytes))
 }
 

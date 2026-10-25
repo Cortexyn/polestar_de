@@ -57,6 +57,25 @@ local function num(s, i, width)
 	return width == 2 and value or value * 64 + B64[c]
 end
 
+-- A number of maps format 5's columns at i: base 32, five bits a symbol, low first, a symbol >= 32 saying another
+-- follows. -> value, the position after it.
+local function b32(s, i)
+	local value, scale = 0, 1
+	while true do
+		local sym = B64[byte(s, i)]
+		i = i + 1
+		if sym < 32 then
+			return value + sym * scale, i
+		end
+		value, scale = value + (sym - 32) * scale, scale * 32
+	end
+end
+
+-- A zigzag column number as the difference it stands for: 0, 1, 2, 3, 4, ... -> 0, -1, 1, -2, 2, ...
+local function unzig(v)
+	return v % 2 == 0 and v / 2 or -(v + 1) / 2
+end
+
 -- Slicing yields at the shared deadline; pump swaps each coroutine's private search scratch before resuming it.
 local deadline, ops, expansions = huge, 0, 0
 local clock = function()
@@ -91,9 +110,53 @@ local function Expansions(count)
 	return expansions
 end
 
--- Compressed terrain is bundled with the main addon; decoded clusters stay lazy.
+-- Compressed terrain is bundled with the main addon; decoded clusters stay lazy. A map of Leffe's (maps format 5)
+-- keeps only its metadata here: its parts ship in a load-on-demand addon (D.part, Polestar_Nav_EK or
+-- Polestar_Nav_Kalimdor) that State loads the first time a search needs the map.
 local function Data(map)
 	return PolestarPathData and PolestarPathData[map]
+end
+
+-- Every packed field holds the clusters its counts promise (API.lua drops a map that does not at load).
+local function Whole(D)
+	if type(D.packed) ~= "table" or type(D.counts) ~= "table" then
+		return true
+	end
+	for field, want in pairs(D.counts) do
+		local n = 0
+		for _ in pairs(D.packed[field] or {}) do
+			n = n + 1
+		end
+		if n ~= want then
+			return false
+		end
+	end
+	return true
+end
+
+-- A map's part addon, loaded once, never in combat (loading builds tens of MB of packed strings: Nav/Walk.lua's
+-- rule for Polestar_Nav itself). -> whether the map's data is whole now; false in combat (asked again later),
+-- and for good when the part fails to load (the map is dropped: the arrow points straight there).
+local function EnsurePart(map, D)
+	if not D.part or D.partReady then
+		return true
+	end
+	if not Whole(D) then
+		if (InCombatLockdown and InCombatLockdown()) or D.partTried then
+			return false
+		end
+		D.partTried = true
+		local load = C_AddOns and C_AddOns.LoadAddOn
+		if load then
+			pcall(load, D.part)
+		end
+		if not Whole(D) then
+			PolestarPathData[map] = nil
+			return false
+		end
+	end
+	D.partReady = true
+	return true
 end
 
 local states = {}
@@ -119,7 +182,8 @@ local function unpackField(data, field, key)
 	local chunks = {}
 	for i, block in ipairs(blocks) do
 		slice()
-		local compressed = C_EncodingUtil.DecodeBase64(block)
+		-- Maps format 5 may carry the zlib bytes themselves (D.blocks == "zlib") instead of base64.
+		local compressed = data.blocks == "zlib" and block or C_EncodingUtil.DecodeBase64(block)
 		local raw = compressed and C_EncodingUtil.DecompressString(compressed, Enum.CompressionMethod.Zlib)
 		if not raw then
 			return nil
@@ -143,7 +207,7 @@ local function State(map)
 		if states[map] then
 			return states[map]
 		end
-		if not D then
+		if not D or not EnsurePart(map, D) then
 			return nil
 		end
 		local C = D.cells
@@ -161,6 +225,7 @@ local function State(map)
 			zstep = D.zstep,
 			classed = Classed(D), -- format 2: Path.lua prices steps by class (and style) and the heuristic by its least
 			zoned = D.zone ~= nil, -- the zone field: Path.lua prices a step into a zone by its caller's danger table
+			columns = D.format == 5, -- maps format 5: the floor field in columns (decodeFloors)
 			sizes = {},
 			used = {}, -- [k] = last use, for eviction
 			decoded = 0,
@@ -171,8 +236,8 @@ local function State(map)
 			links = {}, -- [k][node + 1] = { direction + 8 * (layer + 1), ... } steps besides the base grid's
 			cls = {}, -- [k][node + 1] = ground class byte (Routing/Costs.lua); ZERO for a cluster without classes
 			area = {}, -- [k] = the cluster's area field string (maps format 3; nodeArea reads it), kept while it is decoded
-			arcs = {}, -- [k][node + 1] = { to, length in cells, ... }: one-way moves (maps format 5's arc field); false: none
-			rarcs = {}, -- [k][node + 1] = the same arcs backwards { from, length, ... }, for a search out of a goal
+			arcs = {}, -- [k] = the cluster's one-way moves (maps format 5's arc field; decodeArcs), false: none
+			rarcs = {}, -- [k] = the same arcs backwards (by end), for a search out of a goal
 			graphUsed = {},
 			graphSize = {},
 			nodes = {}, -- [k] = entrance ids (k * 4096 + i)
@@ -304,13 +369,10 @@ local function decodeHeights(st, val, z, s)
 	end
 end
 
-local function decodeFloors(st, k, val, z, chunks)
-	local at, links = {}, {}
-	if not chunks then
-		return at, links
-	end
-	local s, C = chunks, st.C
-	local node, pos = C * C, 4
+-- The floor field's floors and explicit links into val, z, at and links (rows, maps formats 1-3). -> the first node
+-- past the floors.
+local function floorRows(st, val, z, at, links, s)
+	local node, pos = st.C * st.C, 4
 	for _ = 1, num(s, 1, 3) do
 		local lc, count = num(s, pos, 3), B64[byte(s, pos + 3)]
 		pos = pos + 4
@@ -324,7 +386,6 @@ local function decodeFloors(st, k, val, z, chunks)
 			pos, node = pos + 5, node + 1
 		end
 	end
-	local last = node
 	for i = 1, num(s, pos, 3) do
 		if i % 64 == 0 then
 			slice()
@@ -332,6 +393,78 @@ local function decodeFloors(st, k, val, z, chunks)
 		addLink(links, num(s, pos + 3, 3), B64[byte(s, pos + 6)], B64[byte(s, pos + 7)])
 		pos = pos + 5
 	end
+	return node
+end
+
+-- The same from maps format 5's columns (Nav<map>.lua's header): n | n cell gaps | n counts (1) | the floors' values
+-- (1) | their heights (zigzag, against the floor below, a cell's first against the previous cell's first) | their
+-- steps (2) | m | m link nodes (zigzag, against the previous link's) | m directions (1) | m layers (1).
+local function floorColumns(st, val, z, at, links, s)
+	local N = st.C * st.C
+	local n, pos = b32(s, 1)
+	local cells, lc = {}, -1
+	for i = 1, n do
+		local gap
+		gap, pos = b32(s, pos)
+		lc = lc + gap + 1
+		cells[i] = lc
+	end
+	local counts, floors = pos, 0
+	for i = 0, n - 1 do
+		floors = floors + B64[byte(s, counts + i)]
+	end
+	local values = counts + n
+	pos = values + floors
+	local node, first = N, 0
+	for i = 1, n do
+		if i % 64 == 0 then
+			slice()
+		end
+		lc = cells[i]
+		at[-(lc + 1)] = node
+		local below = first
+		for j = 1, B64[byte(s, counts + i - 1)] do
+			local d
+			d, pos = b32(s, pos)
+			below = below + unzig(d)
+			if j == 1 then
+				first = below
+			end
+			val[node + 1], z[node + 1], at[node + 1] = B64[byte(s, values + node - N)], below, lc
+			node = node + 1
+		end
+	end
+	for f = 0, floors - 1 do
+		if f % 256 == 0 then
+			slice()
+		end
+		links[N + f + 1] = stepLinks[num(s, pos + 2 * f, 2)]
+	end
+	local m
+	m, pos = b32(s, pos + 2 * floors)
+	local from, u = {}, 0
+	for i = 1, m do
+		local d
+		d, pos = b32(s, pos)
+		u = u + unzig(d)
+		from[i] = u
+	end
+	for i = 1, m do
+		if i % 64 == 0 then
+			slice()
+		end
+		addLink(links, from[i], B64[byte(s, pos + i - 1)], B64[byte(s, pos + m + i - 1)])
+	end
+	return node
+end
+
+local function decodeFloors(st, k, val, z, chunks)
+	local at, links = {}, {}
+	if not chunks then
+		return at, links
+	end
+	local C = st.C
+	local last = (st.columns and floorColumns or floorRows)(st, val, z, at, links, chunks)
 	-- A base cell's links to floors inside the cluster are the reverse of the floors' own.
 	for f = C * C, last - 1 do
 		if f % 64 == 0 then
@@ -475,30 +608,51 @@ local function decodeGrid(st, k)
 	return val, m, z, at, links, classes and decodeClasses(classes, #val) or ZERO
 end
 
--- One-way arcs (maps format 5): n(3) | n x [from(3) to(3) yards * 4(2)] -> forward and backward lists by node + 1,
--- each { node, length in cells, ... }; false without the field.
+-- One-way arcs (maps format 5's columns): n | n from-node gaps (by from node) | n to-nodes (zigzag, against the from
+-- node) | n yards * 4 -> forward and backward arcs, each { at = { [node + 1] = first index }, n = { [node + 1] = count },
+-- to = { node, ... }, len = { length in cells, ... } } (four tables a direction, not one a node: a decode allocates
+-- little); false without the field.
 local function decodeArcs(st, s)
 	if not s then
 		return false, false
 	end
-	local fwd, back = {}, {}
-	local n = num(s, 1, 3)
+	local n, pos = b32(s, 1)
 	local unit = 4 * st.cs
-	for i = 0, n - 1 do
-		local p = 4 + i * 8
-		local a, b, len = num(s, p, 3), num(s, p + 3, 3), num(s, p + 6, 2) / unit
-		local f = fwd[a + 1]
-		if not f then
-			f = {}
-			fwd[a + 1] = f
+	local fwd = { at = {}, n = {}, to = {}, len = {} }
+	local from, cnt = {}, {}
+	local a = 1
+	for i = 1, n do
+		local gap
+		gap, pos = b32(s, pos)
+		a = a + gap
+		if not fwd.at[a] then
+			fwd.at[a], fwd.n[a] = i, 0
 		end
-		f[#f + 1], f[#f + 2] = b, len
-		local r = back[b + 1]
-		if not r then
-			r = {}
-			back[b + 1] = r
-		end
-		r[#r + 1], r[#r + 2] = a, len
+		fwd.n[a] = fwd.n[a] + 1
+		from[i] = a
+	end
+	for i = 1, n do
+		local d
+		d, pos = b32(s, pos)
+		local b = from[i] + unzig(d)
+		fwd.to[i] = b - 1
+		cnt[b] = (cnt[b] or 0) + 1
+	end
+	for i = 1, n do
+		local y
+		y, pos = b32(s, pos)
+		fwd.len[i] = y / unit
+	end
+	-- Backwards: the same arcs grouped by their end (a counting sort).
+	local back = { at = {}, n = cnt, to = {}, len = {} }
+	local pos, fill = 1, {}
+	for b, c in pairs(cnt) do
+		back.at[b], fill[b], pos = pos, pos, pos + c
+	end
+	for i = 1, n do
+		local b = fwd.to[i] + 1
+		local j = fill[b]
+		back.to[j], back.len[j], fill[b] = from[i] - 1, fwd.len[i], j + 1
 	end
 	return fwd, back
 end

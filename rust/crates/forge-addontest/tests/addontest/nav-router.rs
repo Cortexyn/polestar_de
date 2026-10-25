@@ -14,7 +14,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::SQRT_2;
 
-use forge_addontest::navmap::{enc, encode_areas, write_map, FixtureCell, FixtureMap, MapDir};
+use forge_addontest::navmap::{b32, enc, encode_areas, write_map, zigzag, FixtureCell, FixtureMap, MapDir};
 use forge_addontest::run::{addons_dir, root, toc_entries};
 use forge_addontest::tmp::TempDir;
 use forge_addontest::{emitted, Addon, RunAddon};
@@ -1157,12 +1157,16 @@ fn lifts_a_lift_chokepoint_joins_ground_the_grid_leaves_apart_find_rides_it_find
 }
 
 // Arcs (maps format 5, Leffe's jumps and drops): the two strips of the lift test with no lift, and one arc from the
-// near strip's end to the far strip's start in the cluster's arc field: a one-way move the grid's steps lack.
+// near strip's end to the far strip's start in the cluster's arc field (its columns: n | from gaps | to-nodes against
+// the from node | yards * 4): a one-way move the grid's steps lack.
 const ARC_YD: f64 = 12.0;
 fn arc_files() -> MapDir {
 	let mut map = lift_files(false);
 	let (a, b) = ((X0 + LIFT_GAP) * C + Y0, (X1 - LIFT_GAP) * C + Y0);
-	let field = format!("{}{}{}{}", enc(1.0, 3).unwrap(), enc(a as f64, 3).unwrap(), enc(b as f64, 3).unwrap(), enc(ARC_YD * 4.0, 2).unwrap());
+	let mut field = String::new();
+	for v in [1, a as u64, zigzag(b as i64 - a as i64), (ARC_YD * 4.0) as u64] {
+		b32(v, &mut field);
+	}
 	let file = map.dir.path().join("Arcs.lua");
 	std::fs::write(&file, format!("PolestarPathData[{MAP}].arc = {{ [1] = \"{field}\" }}\n")).unwrap();
 	map.files.push(file);

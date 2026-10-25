@@ -331,10 +331,11 @@ local function search(st, k, swim, mult, source, tree, goal, targets, left, back
 					end
 				end
 			end
-			local a = arcs and arcs[i]
+			local a = arcs and arcs.at[i]
 			if a then
-				for e = 1, #a, 2 do
-					relax(a[e], a[e + 1])
+				local to, len = arcs.to, arcs.len
+				for e = a, a + arcs.n[i] - 1 do
+					relax(to[e], len[e])
 				end
 			end
 		end
@@ -568,6 +569,8 @@ end
 local LIFT_COST = 175 -- 25 s (wait and ride) at 7 yd/s
 local LIFT_ID = 1073741824 -- landing i's vertex is LIFT_ID + i, above every entrance id
 local LIFT_ENDS = 64
+-- The longest walk a search looks for: DETOUR times the straight line plus DETOUR_YD yards (run's abstract A*).
+local DETOUR, DETOUR_YD = 8, 2000
 
 -- The map's lift landings, read once a map state: { [i] = { x, y, z, k, partners = { j, ... } }, byCluster = { [k] =
 -- { i, ... } } }.
@@ -823,7 +826,15 @@ local function run(map, from, to, waterWalking, costOnly, profile, job, style, d
 		agen = agen + 1
 		local gen = agen
 		hn = 0
+		-- No walk is worth more than DETOUR times the straight line plus DETOUR_YD: past that the search stops
+		-- (unreachable; Nav/Walk.lua asks again without the start's height). A start on a surface the maps join to the
+		-- world only far away (the terrain buried under Stormwind's Trade District, reached by Leffe's maps only over
+		-- the mountains: 20 km) otherwise searched most of a continent's graph for seconds.
+		local detour = DETOUR * sqrt((to.x - from.x) ^ 2 + (to.y - from.y) ^ 2) + DETOUR_YD
 		local function relax(v, gv, yv, parent)
+			if yv and yv > detour then
+				return
+			end
 			if astamp[v] ~= gen or gv < ag[v] then
 				ag[v], ay[v], apar[v], astamp[v] = gv, yv, parent, gen
 				push(gv + (v == GOAL and 0 or h(v)), v)

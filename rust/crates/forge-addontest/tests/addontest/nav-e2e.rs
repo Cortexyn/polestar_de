@@ -801,6 +801,11 @@ fn the_walking_maps_load_on_demand_only_with_walk_real_paths_on_nav_navrouting_o
 	assert!(f(&on["finds"]) >= 1.0);
 }
 
+// Map 0's part files: in its part addon (maps format 5: Polestar_Nav_EK) or in Polestar_Nav/Nav.
+fn parts_dir() -> PathBuf {
+	forge_nav::pack::part_of(0).map(|p| addons_dir().join(p)).filter(|d| d.is_dir()).unwrap_or_else(nav_dir)
+}
+
 // The part file holding the cluster (ADT tile) of a world point on map 0, and that cluster's index.
 fn cluster_file(wx: f64, wy: f64) -> (i64, Option<String>) {
 	let meta = std::fs::read_to_string(nav_dir().join("Nav0.lua")).unwrap();
@@ -809,9 +814,9 @@ fn cluster_file(wx: f64, wy: f64) -> (i64, Option<String>) {
 	let k = ((wx / t).floor() as i64 - num("cx0")) * num("ny") + ((wy / t).floor() as i64 - num("cy0"));
 	let part = Regex::new(r"^Nav0_\d+\.lua$").unwrap();
 	let needle = format!("data.packed.grid[{}] = ", k + 1);
-	let mut names: Vec<String> = std::fs::read_dir(nav_dir()).unwrap().filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| part.is_match(n)).collect();
+	let mut names: Vec<String> = std::fs::read_dir(parts_dir()).unwrap().filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| part.is_match(n)).collect();
 	names.sort();
-	let file = names.into_iter().find(|n| std::fs::read_to_string(nav_dir().join(n)).unwrap().contains(&needle));
+	let file = names.into_iter().find(|n| String::from_utf8_lossy(&std::fs::read(parts_dir().join(n)).unwrap()).contains(&needle));
 	(k, file)
 }
 
@@ -824,9 +829,13 @@ const STRAIGHT: &str = r#"
 	emit({ state = a.state, toTarget = a.x and dist(a.x, a.y, tx, ty), measured = a.measured, available = E and E.Available(0), points = f and f.points and #f.points or 0, cost = f and f.cost })"#;
 
 fn with_maps(files: &[PathBuf], script: &str) -> Value {
+	with_maps_and(files, "", script)
+}
+
+fn with_maps_and(files: &[PathBuf], extra: &str, script: &str) -> Value {
 	emitted(&RunAddon {
 		stubs: vec!["stub_world.lua", "stub_encoding.lua", "stub_packs.lua"],
-		before: before(files),
+		before: format!("{}\n{extra}", before(files)),
 		addons: polestar_addons(),
 		login: true,
 		script: format!("{PRELUDE}\n{script}"),
@@ -855,14 +864,23 @@ fn a_corrupted_grid_block_of_the_map_leaves_the_straight_arrow_for_that_walk_wit
 	let file = file.expect("Goldshire's cluster is in one part file");
 	let tmp = TempDir::new("polestar-nav-bad-");
 	let bad = tmp.path().join(&file);
-	let text = std::fs::read_to_string(nav_dir().join(&file)).unwrap();
-	let re = Regex::new(&format!(r"(?m)^data\.packed\.grid\[{}\] = \{{[^}}]*\}}$", k + 1)).unwrap();
-	let broken = re.replace(&text, format!("data.packed.grid[{}] = {{\"bm90IHpsaWI=\"}}", k + 1).as_str()).into_owned();
-	assert_ne!(broken, text);
+	let bytes = std::fs::read(parts_dir().join(&file)).unwrap();
+	// A block that is not zlib: as the metadata's literals carry blocks (zlib bytes, or base64).
+	let zlib = std::fs::read_to_string(nav_dir().join("Nav0.lua")).unwrap().contains("\n\tblocks = \"zlib\",\n");
+	let re = regex::bytes::Regex::new(&format!(r"(?m-u)^data\.packed\.grid\[{}\] = \{{.*\}}$", k + 1)).unwrap();
+	let block = if zlib { "not zlib" } else { "bm90IHpsaWI=" };
+	let broken = re.replace(&bytes, format!("data.packed.grid[{}] = {{\"{block}\"}}", k + 1).as_bytes()).into_owned();
+	assert_ne!(broken, bytes);
 	std::fs::write(&bad, broken).unwrap();
 	let (_ns_tmp, ns) = ns_file();
-	let files: Vec<PathBuf> = nav_files(&ns).into_iter().map(|p| if p.file_name().is_some_and(|n| n.to_string_lossy() == file) { bad.clone() } else { p }).collect();
-	let out = with_maps(&files, STRAIGHT);
+	let swap = |p: PathBuf| if p.file_name().is_some_and(|n| n.to_string_lossy() == file) && p.starts_with(parts_dir()) { bad.clone() } else { p };
+	let out = if parts_dir() == nav_dir() {
+		with_maps(&nav_files(&ns).into_iter().map(swap).collect::<Vec<_>>(), STRAIGHT)
+	} else {
+		let part = forge_nav::pack::part_of(0).unwrap();
+		let list: Vec<String> = toc_files(part).unwrap().into_iter().map(swap).map(|p| lua_string(&p.to_string_lossy())).collect();
+		with_maps_and(&nav_files(&ns), &format!("stub.packs.{part} = {{ {} }}", list.join(", ")), STRAIGHT)
+	};
 	assert_eq!(out["available"], true, "the map is there");
 	assert_eq!(out["points"], 0, "no path through the broken cluster ({})", out["cost"]);
 	assert_eq!(out["state"], "travel");

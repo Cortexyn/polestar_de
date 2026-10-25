@@ -725,6 +725,7 @@ dependencies = [
  "cch",
  "flate2",
  "forge-core",
+ "forge-guide",
  "forge-world",
  "memmap2",
  "miniz_oxide 0.8.9",
