@@ -165,7 +165,15 @@ fn main() -> Result<(), String> {
 					}
 				}
 				let arcs = (0..c.a_from.len())
-					.map(|a| Arc { from: c.a_from[a], dx: c.a_dx[a], dy: c.a_dy[a], to: c.a_to[a], kind: c.a_kind[a], yards: c.a_yards[a], cost: [c.a_cost[3 * a], c.a_cost[3 * a + 1], c.a_cost[3 * a + 2]] })
+					.map(|a| Arc {
+						from: c.a_from[a],
+						dx: c.a_dx[a],
+						dy: c.a_dy[a],
+						to: c.a_to[a],
+						kind: c.a_kind[a],
+						yards: c.a_yards[a],
+						cost: [c.a_cost[3 * a], c.a_cost[3 * a + 1], c.a_cost[3 * a + 2]],
+					})
 					.collect();
 				Ok((k, Some(slim(meta, k, &c)), arcs, gs, extra))
 			})
@@ -193,10 +201,27 @@ fn main() -> Result<(), String> {
 			all_arcs.push((k, arcs));
 		}
 		writeln!(out, "  decoded in {:.1}s; floors {} ports {} over-open steps {} refined nodes {}", t0.elapsed().as_secs_f64(), ex[0], ex[1], ex[2], ex[3]).ok();
-		writeln!(out, "  graph: rows {} (on ports {}), edges {} (inter {}), with jumps {}, rows over 63 edges {}, max degree {}, costs equal in all slots {}", gs.rows, gs.port_rows, gs.edges, gs.inter, gs.jump_edges, gs.over63, gs.max_degree, gs.costs_equal).ok();
+		writeln!(
+			out,
+			"  graph: rows {} (on ports {}), edges {} (inter {}), with jumps {}, rows over 63 edges {}, max degree {}, costs equal in all slots {}",
+			gs.rows, gs.port_rows, gs.edges, gs.inter, gs.jump_edges, gs.over63, gs.max_degree, gs.costs_equal
+		)
+		.ok();
 		let ny = meta.ny;
-		let owner_of = |s: &Slim, node: u32| -> u32 { if s.owner[node as usize] >= 0 { s.owner[node as usize] as u32 } else { node } };
-		let cell_of = |s: &Slim, o: u32| -> i64 { if (o as usize) < ncell { o as i64 } else { s.at_cell[o as usize] as i64 } };
+		let owner_of = |s: &Slim, node: u32| -> u32 {
+			if s.owner[node as usize] >= 0 {
+				s.owner[node as usize] as u32
+			} else {
+				node
+			}
+		};
+		let cell_of = |s: &Slim, o: u32| -> i64 {
+			if (o as usize) < ncell {
+				o as i64
+			} else {
+				s.at_cell[o as usize] as i64
+			}
+		};
 		let gcell = |k: u32, lc: i64| -> (i64, i64) { (k as i64 / ny * cc as i64 + lc / cc as i64, k as i64 % ny * cc as i64 + lc % cc as i64) };
 		// The in-game engine's surface for a link layer (0 base, i the ith floor, -1 nearest h).
 		let surface = |s: &Slim, lc: i64, layer: i64, h: f32| -> i64 {
@@ -248,7 +273,11 @@ fn main() -> Result<(), String> {
 						return false;
 					}
 					let f = s1.flags[l1 as usize];
-					if ox != 0 { f % 2 == 0 } else { f % 4 < 2 }
+					if ox != 0 {
+						f % 2 == 0
+					} else {
+						f % 4 < 2
+					}
 				};
 				if dx == 0 || dy == 0 {
 					return open(ax, ay, dx, dy);
@@ -344,7 +373,12 @@ fn main() -> Result<(), String> {
 				kept_bytes += z.finish().unwrap().len();
 			}
 		}
-		writeln!(out, "  arcs: jump {} drop {} climb {} self {} derivable {} same-cell {} adjacent-not-derivable {} farther {}", counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7]).ok();
+		writeln!(
+			out,
+			"  arcs: jump {} drop {} climb {} self {} derivable {} same-cell {} adjacent-not-derivable {} farther {}",
+			counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7]
+		)
+		.ok();
 		writeln!(out, "  kept arcs {kept_n}: span in cells 0..5+ {:?}; zlib {:.2} MB", span, kept_bytes as f64 / 1e6).ok();
 		cost_ratio.sort_by(|a, b| a.partial_cmp(b).unwrap());
 		if !cost_ratio.is_empty() {

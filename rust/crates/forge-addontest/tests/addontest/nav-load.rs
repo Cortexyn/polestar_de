@@ -66,12 +66,7 @@ fn middle_part(map: i32) -> Option<String> {
 // An addon's files without `drop`, relative to its folder.
 fn without(addon: &str, drop: &str) -> Vec<String> {
 	let dir = addons_dir().join(addon);
-	toc_files(addon)
-		.unwrap()
-		.iter()
-		.filter(|f| f.file_name().map(|n| n.to_string_lossy() != drop).unwrap_or(true))
-		.map(|f| f.strip_prefix(&dir).unwrap().to_string_lossy().into_owned())
-		.collect()
+	toc_files(addon).unwrap().iter().filter(|f| f.file_name().map(|n| n.to_string_lossy() != drop).unwrap_or(true)).map(|f| f.strip_prefix(&dir).unwrap().to_string_lossy().into_owned()).collect()
 }
 
 const WALK_LUA: &str = r#"

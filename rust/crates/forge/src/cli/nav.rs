@@ -211,7 +211,9 @@ fn pack(args: &[String]) -> Result<(), Fail> {
 		Some(d) => {
 			let maps: Vec<u32> = match o.get("--leffe-maps") {
 				None => forge_nav::pack::MAPS.to_vec(),
-				Some(v) => v.split(',').map(|m| m.trim().parse().ok().filter(|m| forge_nav::pack::MAPS.contains(m))).collect::<Option<_>>().ok_or_else(|| usage("--leffe-maps needs maps among 0,1,2991"))?,
+				Some(v) => {
+					v.split(',').map(|m| m.trim().parse().ok().filter(|m| forge_nav::pack::MAPS.contains(m))).collect::<Option<_>>().ok_or_else(|| usage("--leffe-maps needs maps among 0,1,2991"))?
+				}
 			};
 			Some((PathBuf::from(d), maps))
 		}

@@ -526,7 +526,13 @@ pub fn leffe_maps(dir: &Path, map: u32, cg: &CellGrid) -> Result<(Maps, BTreeSet
 		src.with_part(map, part, &mut |bytes| res = pack::scan_part(bytes, part as u32, &mut meta.index, &mut asm, &name))?;
 		res?;
 	}
-	if meta.c as usize != cg.c || meta.nx as usize != cg.nx || meta.ny as usize != cg.ny || (meta.x0 / TILE).round() as i32 != cg.cx0 || (meta.y0 / TILE).round() as i32 != cg.cy0 || meta.zstep != ZQ as f64 {
+	if meta.c as usize != cg.c
+		|| meta.nx as usize != cg.nx
+		|| meta.ny as usize != cg.ny
+		|| (meta.x0 / TILE).round() as i32 != cg.cx0
+		|| (meta.y0 / TILE).round() as i32 != cg.cy0
+		|| meta.zstep != ZQ as f64
+	{
 		return Err(format!("leffe: map {map}'s frame, cells or height step differ from the grid's (his {} cells, {}x{}; ours {}, {}x{})", meta.c, meta.nx, meta.ny, cg.c, cg.nx, cg.ny));
 	}
 	let mut keys: Vec<u32> = meta.index.get("grid").map(|m| m.keys().copied().collect()).unwrap_or_default();

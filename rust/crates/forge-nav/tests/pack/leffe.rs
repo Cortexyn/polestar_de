@@ -45,7 +45,10 @@ fn leffe_zephras_packs_his_maps_as_format_5_and_naming_no_map_of_his_packs_the_g
 	assert!(meta.lines().any(|l| l == "\tformat = 5,"), "maps format 5");
 	assert!(meta.lines().any(|l| l == "\tarc = {},"), "the arc field");
 	assert!(meta.lines().any(|l| l == "\tblocks = \"zlib\","), "the blocks as zlib bytes");
-	assert!(meta.lines().next().unwrap().contains("--leffe` from the navigation grid") && meta.lines().next().unwrap().contains("and Leffe's navigation maps on 2026-10-25."), "the header credits his maps");
+	assert!(
+		meta.lines().next().unwrap().contains("--leffe` from the navigation grid") && meta.lines().next().unwrap().contains("and Leffe's navigation maps on 2026-10-25."),
+		"the header credits his maps"
+	);
 	let manifest: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(his.join("PACK.json")).unwrap()).unwrap();
 	assert_eq!(manifest["format"], 5);
 	let m = &manifest["maps"]["2991"];

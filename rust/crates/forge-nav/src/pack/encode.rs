@@ -527,7 +527,16 @@ pub fn block(raw: &[u8]) -> String {
 /// naming the rows of a format 3 map's area field; `addon` the load-on-demand addon the parts ship in (their names
 /// then `<addon>/Nav<map>_<n>.lua`, and the metadata names it: `part = "<addon>"`). -> (files, packed bytes)
 #[allow(clippy::too_many_arguments)]
-pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str, hubs: &[Hub], area_names: Option<&serde_json::Value>, addon: Option<&str>) -> Result<(Vec<(String, String)>, usize), String> {
+pub fn pack_files(
+	map: u32,
+	cg: &CellGrid,
+	maps: &Maps,
+	global: &str,
+	gen: &str,
+	hubs: &[Hub],
+	area_names: Option<&serde_json::Value>,
+	addon: Option<&str>,
+) -> Result<(Vec<(String, String)>, usize), String> {
 	let mut files = Vec::new();
 	let classed = maps.class.is_some();
 	let areaed = classed && maps.area.is_some();
@@ -554,7 +563,16 @@ pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str,
 	meta.push("-- stylua: ignore".into());
 	meta.push(format!("{global}[{map}] = {{"));
 	if classed {
-		meta.push(format!("\tformat = {},", if maps.arc.is_some() && areaed { 5 } else if areaed { 3 } else { 2 }));
+		meta.push(format!(
+			"\tformat = {},",
+			if maps.arc.is_some() && areaed {
+				5
+			} else if areaed {
+				3
+			} else {
+				2
+			}
+		));
 		meta.push("\tprofiles = { \"Alliance\", \"Horde\" },".into());
 		if let Some(a) = addon {
 			meta.push(format!("\tpart = {},", lua_str(a)));
