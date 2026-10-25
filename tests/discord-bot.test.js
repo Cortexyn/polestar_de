@@ -355,6 +355,30 @@ test('a release tells the threads of fixes closed since the last release, once',
 	assert.deepEqual(await onRelease({ discord, github, event: { release }, log: quietLog }), { told: 0, failed: 0 });
 });
 
+test('a Forge, data, library or data pack release tells no thread and is never the release before', async () => {
+	const { discord, github, sync } = setup();
+	for (const id of ['1', '2']) {
+		discord.post(id, { content: 'bug ' + id });
+		await sync.newPost(id);
+	}
+	const close = (n, at) => Object.assign(github.issues[n - 1], { state: 'closed', state_reason: 'completed', closed_at: at });
+	close(1, '2026-10-15T00:00:00Z');
+	close(2, '2026-10-17T00:00:00Z');
+	github.releasesList.push({ id: 1, tag_name: 'v0.2.3', published_at: '2026-10-14T16:50:15Z' });
+	const before = discord.sent.length;
+	for (const [id, tag, at] of [[2, 'forge-v0.1.0', '2026-10-16T00:00:00Z'], [3, 'data-v2026.10.1', '2026-10-16T01:00:00Z'], [4, 'lib-v1.2026.10.1', '2026-10-16T02:00:00Z'], [5, 'data-pack', '2026-10-16T03:00:00Z']]) {
+		const r = { id, tag_name: tag, name: tag, published_at: at };
+		github.releasesList.push(r);
+		assert.deepEqual(await onRelease({ discord, github, event: { release: r }, log: quietLog }), { told: 0, failed: 0 }, tag);
+	}
+	assert.equal(discord.sent.length, before);
+	assert.ok(github.issues.every((i) => !(i.labels || []).some((l) => /^released:/.test(l.name))));
+	// The addon release after them counts from v0.2.3: both fixes ship in it.
+	const release = { id: 6, tag_name: 'v0.2.5', name: 'Polestar 0.2.5', html_url: 'https://github.com/fitzforge/polestar/releases/tag/v0.2.5', published_at: '2026-10-18T00:00:00Z' };
+	github.releasesList.push(release);
+	assert.deepEqual(await onRelease({ discord, github, event: { release }, log: quietLog }), { told: 2, failed: 0 });
+});
+
 test('a pre-release (a test build) tells no thread, and the next full release still tells every fix since the last full one', async () => {
 	const { discord, github, sync } = setup();
 	for (const id of ['1', '2']) {
