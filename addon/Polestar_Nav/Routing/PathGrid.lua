@@ -24,9 +24,9 @@ ns.Path = Path
 
 Path.budget = 2 -- milliseconds of path work, leaving headroom under the 3 ms frame ceiling
 Path.clusters = 64 -- secondary count ceiling per map (at least 4)
-Path.graphKB = 4096 -- decoded entrances/edges across all maps while a search runs
+Path.graphKB = 4096 -- decoded entrances/edges across all maps while a search runs (API.lua sets Polestar's)
 Path.graphRestKB = 4096 -- the same with no search queued (Idle trims to it)
-Path.cacheKB = 24576 -- decoded grids across all maps; active coroutine locals are additional
+Path.cacheKB = 8192 -- decoded grids across all maps; active coroutine locals are additional
 Path.endsMax = 256  -- max cached endpoint-connection entries; raise offline to avoid repeated connect() searches
 Path.clock = debugprofilestop or function()
 	return os.clock() * 1000
@@ -233,13 +233,11 @@ local function State(map)
 			area = {}, -- [k] = the cluster's area field string (maps format 3; nodeArea reads it), kept while it is decoded
 			graphUsed = {},
 			graphSize = {},
-			nodes = {}, -- [k] = entrance ids (k * 4096 + i)
-			ncell = {}, -- [id] = local cell
-			nlayer = {}, -- [id] = 0 for the base surface, i for the cell's ith floor
-			ncomp = {},
+			nodes = {}, -- [k] = entrance ids (k * 4096 + i); each one's cell, layer and component are read from the graph
+			-- string (metadata)
+			adj = {}, -- [k][i + 1] = the position of entrance i's first edge record in the cluster's graph string (edges)
 			ends = {}, -- bounded local connections, shared by successive endpoint batches
 			endCount = 0,
-			nadj = {}, -- [id] = the position of its first edge record in its cluster's graph string (edges)
 		}
 		states[map] = st
 	end
@@ -290,7 +288,9 @@ for mask = 0, 255 do
 	end
 	MASK[mask] = dirs
 end
-local ARC, ARC2 = 2 ^ 36, 2 * 2 ^ 36 -- an arc's payload in the decoder's move list (below)
+-- The decoder's move list (below): an entry is node * NODE + its payload, the payload a step's d + 8 * (layer + 1), an
+-- arc's ARC (backwards ARC2) + the node at its other end * 65536 + yards * 4 (nodes below 2 ^ 17: 52 bits).
+local NODE, ARC, ARC2 = 2 ^ 35, 2 ^ 33, 2 ^ 34
 
 -- Node's height in decoded cluster c.
 local function zOf(c, node)
@@ -342,13 +342,13 @@ end
 -- (Idle drops them). A decode that yields holds its set; another decode meanwhile takes a fresh one.
 --   v, z    [node + 1] = val (then the kind byte), height; m [lc + 1] = moves; at [floor + 1] = local cell;
 --   first   [lc + 1] = first floor node + 1 or 0; lm [node + 1] = layer -1 step mask;
---   xn, xp  the other moves (node, payload: a step d + 8 * (layer + 1); an arc ARC (backwards ARC2) + node at its
---           other end * 65536 + yards * 4); o, xs their counting sort by node; buf, parts the strings being written
+--   x       the other moves (entries above, nx of them; sorted by node before they are written); cells a floor
+--           field's cells; buf, parts the string being written, xbuf the move bytes
 local spare
 local function takeScratch()
 	local S = spare
 	spare = nil
-	return S or { v = {}, z = {}, m = {}, at = {}, first = {}, lm = {}, xn = {}, xp = {}, o = {}, xs = {}, buf = {}, parts = {}, nx = 0, np = 0 }
+	return S or { v = {}, z = {}, m = {}, at = {}, first = {}, lm = {}, x = {}, cells = {}, buf = {}, xbuf = {}, parts = {}, nx = 0, xmax = 0, np = 0 }
 end
 
 local CHUNK = 4096 -- bytes a string.char call
@@ -419,7 +419,7 @@ end
 -- A move of node besides the base grid's: a step d to layer (-1 joins the node's step mask), or any payload.
 local function addMove(S, node, payload)
 	local nx = S.nx + 1
-	S.xn[nx], S.xp[nx], S.nx = node, payload, nx
+	S.x[nx], S.nx = node * NODE + payload, nx
 end
 local function link(S, node, d, layer)
 	if layer == -1 then
@@ -523,7 +523,7 @@ local function floorColumns(S, N, s)
 	local n, pos = b32(s, 1)
 	-- The cells go into AT's tail end first (AT[F + i] for the ith cell): read once each, below.
 	local counts, floors = 0, 0
-	local cells = S.xs -- free until the counting sort
+	local cells = S.cells
 	local lc = -1
 	for i = 1, n do
 		local gap
@@ -584,18 +584,18 @@ end
 -- node) | n yards * 4 -> into the move list: each arc at its start, then each backwards at its end.
 local function decodeArcs(S, s)
 	local n, pos = b32(s, 1)
-	local xn, xp, e0 = S.xn, S.xp, S.nx
+	local X, e0 = S.x, S.nx
 	local a = 0
 	for i = 1, n do
 		local gap
 		gap, pos = b32(s, pos)
 		a = a + gap
-		xn[e0 + i] = a
+		X[e0 + i] = a * NODE
 	end
 	for i = 1, n do
 		local d
 		d, pos = b32(s, pos)
-		xp[e0 + i] = xn[e0 + i] + unzig(d)
+		X[e0 + i] = X[e0 + i] + X[e0 + i] / NODE + unzig(d) -- its start * NODE + its end
 	end
 	for i = 1, n do
 		if i % 256 == 0 then
@@ -603,18 +603,18 @@ local function decodeArcs(S, s)
 		end
 		local y
 		y, pos = b32(s, pos)
-		xp[e0 + i] = ARC + xp[e0 + i] * 65536 + min(y, 65535)
+		local v = X[e0 + i]
+		local to = v % NODE
+		X[e0 + i] = v - to + ARC + to * 65536 + min(y, 65535)
 	end
 	S.nx = e0 + n
 	for e = e0 + 1, e0 + n do
-		local p = xp[e] - ARC
-		addMove(S, floor(p / 65536), ARC2 + xn[e] * 65536 + p % 65536)
+		local v = X[e]
+		local p = v % NODE
+		local from, rest = (v - p) / NODE, p - ARC
+		local y = rest % 65536
+		addMove(S, (rest - y) / 65536, ARC2 + from * 65536 + y)
 	end
-end
-
--- A move list payload's bytes in xs.
-local function moveBytes(p)
-	return p >= ARC and 6 or p >= 248 and 3 or 1
 end
 
 -- Decode cluster k into its strings (above). -> the cluster ({ kind, mv, z, fl, first, lm, xo, xs, N, T, bytes }), or
@@ -705,9 +705,12 @@ local function decodeGrid(st, k)
 	local T = N
 	if floors then
 		T = (st.columns and floorColumns or floorRows)(S, N, floors)
+		if T >= 131072 then -- the move list's node numbers (NODE)
+			error("PathGrid: cluster " .. k .. " has more than 131071 nodes")
+		end
 		-- A base cell's links to floors inside the cluster are the reverse of the floors' own (the floors' layer -1
 		-- steps, then their links to other layers).
-		local AT, xn, xp, explicit = S.at, S.xn, S.xp, S.nx
+		local AT, X, explicit = S.at, S.x, S.nx
 		for f = N, T - 1 do
 			if f % 64 == 0 then
 				slice()
@@ -729,9 +732,10 @@ local function decodeGrid(st, k)
 			end
 		end
 		for e = 1, explicit do
-			local f = xn[e]
+			local p = X[e] % NODE
+			local f = (X[e] - p) / NODE
 			if f >= N and f < T then
-				local lc, p = AT[f - N + 1], xp[e]
+				local lc = AT[f - N + 1]
 				local d = p % 8
 				local tx, ty = floor(lc / C) + DX[d], lc % C + DY[d]
 				if tx >= 0 and ty >= 0 and tx < C and ty < C then
@@ -791,64 +795,57 @@ local function decodeGrid(st, k)
 			FIRST[i] = f * 64 + min(count, 63)
 		end
 	end
-	-- The other moves by node (a counting sort, stable: steps before arcs, arcs before their backward copies).
-	local O, xn, xp, xs, nx = S.o, S.xn, S.xp, S.xs, S.nx
-	for i = 1, T + 1 do
-		O[i] = 0
+	-- The other moves by node (then by payload: steps, arcs, arcs backwards), each node's first byte in xs (xo) and
+	-- the moves' bytes (xs), in one pass.
+	local X, nx = S.x, S.nx
+	for i = nx + 1, S.xmax do
+		X[i] = nil
 	end
-	for e = 1, nx do
-		local i = xn[e] + 1
-		O[i] = O[i] + 1
-	end
-	local acc = 0
-	for i = 1, T do
-		acc = acc + O[i]
-		O[i] = acc
-	end
-	O[T + 1] = nx
-	for e = nx, 1, -1 do
-		local i = xn[e] + 1
-		xs[O[i]], O[i] = e, O[i] - 1
-	end
-	-- xo (each node's first byte in xs, and the end) and xs, in one pass: xo is built in buf, xs in the o array's
-	-- tail end (free past T + 1).
+	S.xmax = nx
+	table.sort(X)
 	local buf, w, off = S.buf, 0, 0
 	local o1, o2, o3 = 0, 0, 0 -- off's bytes
-	local xb, xw, base = O, 0, T + 1
+	local xb, xw = S.xbuf, 0
 	local xparts, xnp = S.xparts or {}, 0
 	S.xparts, S.np = xparts, 0
+	local j, nextNode = 1, nx > 0 and floor(X[1] / NODE) or T
 	for node = 0, T do
 		buf[w + 1], buf[w + 2], buf[w + 3], w = o1, o2, o3, w + 3
 		if w >= CHUNK then
 			chunk(S, w)
 			w = 0
 		end
-		local j0, j1 = O[node + 1], O[node + 2]
-		if node < T and j1 > j0 then
+		if node == nextNode and node < T then
 			local before = xw
-			for j = j0 + 1, j1 do
-				local p = xp[xs[j]]
+			while j <= nx do
+				local p = X[j] % NODE
+				if (X[j] - p) / NODE ~= node then
+					break
+				end
 				if p < 248 then
-					xb[base + xw + 1], xw = p, xw + 1
+					xb[xw + 1], xw = p, xw + 1
 				elseif p < ARC then
-					xb[base + xw + 1], xb[base + xw + 2], xb[base + xw + 3], xw = 248, p % 8, floor(p / 8), xw + 3
+					xb[xw + 1], xb[xw + 2], xb[xw + 3], xw = 248, p % 8, (p - p % 8) / 8, xw + 3
 				else
 					local tag, rest = p >= ARC2 and 255 or 254, p % ARC
-					local other, y = floor(rest / 65536), rest % 65536
-					xb[base + xw + 1], xb[base + xw + 2], xb[base + xw + 3], xb[base + xw + 4], xb[base + xw + 5], xb[base + xw + 6], xw =
-						tag, floor(other / 65536), floor(other / 256) % 256, other % 256, floor(y / 256), y % 256, xw + 6
+					local y = rest % 65536
+					local other = (rest - y) / 65536
+					local lo = other % 256
+					local hi = (other - lo) / 256
+					xb[xw + 1], xb[xw + 2], xb[xw + 3], xb[xw + 4], xb[xw + 5], xb[xw + 6], xw =
+						tag, (hi - hi % 256) / 256, hi % 256, lo, (y - y % 256) / 256, y % 256, xw + 6
 				end
+				j = j + 1
 			end
-			if xw > before then
-				off = off + xw - before
-				o3 = off % 256
-				o1 = (off - o3) / 256
-				o2 = o1 % 256
-				o1 = (o1 - o2) / 256
-			end
+			nextNode = j <= nx and floor(X[j] / NODE) or T
+			off = off + xw - before
+			o3 = off % 256
+			o1 = (off - o3) / 256
+			o2 = o1 % 256
+			o1 = (o1 - o2) / 256
 			if xw >= CHUNK then
 				xnp = xnp + 1
-				xparts[xnp] = char(unpack(xb, base + 1, base + xw))
+				xparts[xnp] = char(unpack(xb, 1, xw))
 				xw = 0
 			end
 		end
@@ -858,7 +855,7 @@ local function decodeGrid(st, k)
 	end
 	if xw > 0 then
 		xnp = xnp + 1
-		xparts[xnp] = char(unpack(xb, base + 1, base + xw))
+		xparts[xnp] = char(unpack(xb, 1, xw))
 	end
 	local xo = finish(S)
 	local xstr = concat(xparts, "", 1, xnp)
@@ -1006,9 +1003,7 @@ local function trimGraphs(limit)
 		if not owner or not oldest then
 			break
 		end
-		for _, id in ipairs(owner.nodes[oldest]) do
-			owner.ncell[id], owner.nlayer[id], owner.ncomp[id], owner.nadj[id] = nil, nil, nil, nil
-		end
+		owner.adj[oldest] = nil
 		if owner.D.packed then
 			owner.D.graph[oldest + 1] = nil
 		end
@@ -1034,15 +1029,17 @@ local function decodeGraph(st, k)
 	end
 	local s = chunks
 	local n, pos = num(s, 1, 2), 3
-	st.graphSize[k] = (n * 288 + 128 + (st.D.packed and #s or 0)) / 1024
+	st.graphSize[k] = (n * 40 + 128 + (st.D.packed and #s or 0)) / 1024
 	graphKB = graphKB + st.graphSize[k]
+	local adj = {}
+	st.adj[k] = adj
 	for i = 0, n - 1 do
 		ids[i + 1] = k * 4096 + i
 	end
 	local width = st.classed and EDGE2 or EDGE1
 	pos = pos + n * 7
 	for i = 1, n do
-		st.nadj[ids[i]] = pos
+		adj[i] = pos
 		pos = pos + B64[byte(s, 3 + (i - 1) * 7 + 6)] * width
 	end
 	return ids
@@ -1058,11 +1055,9 @@ local function nodesOf(st, k)
 end
 
 local function metadata(st, id)
-	if st.ncell[id] == nil then
-		local s, pos = st.D.graph[floor(id / 4096) + 1], 3 + (id % 4096) * 7
-		st.ncell[id], st.nlayer[id], st.ncomp[id] = num(s, pos, 3), B64[byte(s, pos + 3)], num(s, pos + 4, 2)
-	end
-	return st.ncell[id], st.nlayer[id], st.ncomp[id]
+	local i = id % 4096
+	local a, b, c, d, e, f = byte(st.D.graph[(id - i) / 4096 + 1], 3 + i * 7, 8 + i * 7)
+	return (B64[a] * 64 + B64[b]) * 64 + B64[c], B64[d], B64[e] * 64 + B64[f]
 end
 
 -- An entrance's edges stay in the graph string; a search reads each record where it lies (edges, edgeTarget,
@@ -1078,7 +1073,7 @@ end
 -- and the record width.
 local function edges(st, id)
 	local s = st.D.graph[floor(id / 4096) + 1]
-	return s, st.nadj[id], B64[byte(s, 9 + (id % 4096) * 7)], st.classed and EDGE2 or EDGE1
+	return s, st.adj[floor(id / 4096)][id % 4096 + 1], B64[byte(s, 9 + (id % 4096) * 7)], st.classed and EDGE2 or EDGE1
 end
 
 -- The target entrance of the record at pos of cluster k's graph string s.
@@ -1509,7 +1504,7 @@ local function Idle()
 		for _, entry in ipairs(st.endTrees or {}) do
 			entry.tree = nil
 		end
-		st.endTrees = nil
+		st.endTrees, st.endNodes = nil, 0
 		for k in pairs(st.used) do
 			if reader.st == st and reader.k == k then
 				reader.use = st.used[k]

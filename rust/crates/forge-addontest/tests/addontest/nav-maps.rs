@@ -346,8 +346,8 @@ emit({{ frames = n, cost = got.cost, syncCost = syncCost, points = #got.points, 
 	assert!(toc.lines().any(|l| l == "## LoadOnDemand: 1"), "not loaded at startup");
 	let grid = read(&nav().join("Routing/PathGrid.lua"));
 	assert_eq!(Regex::new(r"(?m)^Path\.budget = (\d+)").unwrap().captures(&grid).unwrap()[1].to_string(), "2", "the 2 ms frame budget");
-	assert_eq!((got["cacheKB"].as_i64().unwrap(), got["graphKB"].as_i64().unwrap()), (48 * 1024, 16 * 1024));
-	assert!(Regex::new(r"(?m)^Path\.cacheKB = 24576 ").unwrap().is_match(&grid));
+	assert_eq!((got["cacheKB"].as_i64().unwrap(), got["graphKB"].as_i64().unwrap()), (8 * 1024, 16 * 1024));
+	assert!(Regex::new(r"(?m)^Path\.cacheKB = 8192 ").unwrap().is_match(&grid));
 }
 
 #[test]
@@ -399,7 +399,7 @@ emit({ found = pts ~= nil, searching = searching, resting = kb(), rest = rest, c
 		vec![Addon::Files("Polestar_Nav".into(), files)],
 	);
 	assert_eq!(got["found"], true);
-	assert_eq!((got["rest"].as_i64().unwrap(), got["ceiling"].as_i64().unwrap()), (6 * 1024, 16 * 1024), "API.lua's ceilings");
+	assert_eq!((got["rest"].as_i64().unwrap(), got["ceiling"].as_i64().unwrap()), (1024, 16 * 1024), "API.lua's ceilings");
 	assert!(got["searching"].as_f64().unwrap() > 512.0);
 	assert!(got["resting"].as_f64().unwrap() <= 512.0);
 }

@@ -559,11 +559,14 @@ end
 -- finds its tree gone and searches again); cap the cache so moving start positions cannot grow it for the entire play
 -- session. A connection is priced for one profile and style on a map with classes (mult.tag), for every one on a map
 -- without. -> the entry's node, edges, tree and yards, and the entry ({ node, edges, yards, tree }).
-local ENDTREES = 4
--- Each run (Find's, FindMany's) stamps the entries it connects: the trees of the run under way are never the ones
--- given up (a start without a height connects each of its surfaces: Ironforge's floors), so st.endTrees may hold more
--- than ENDTREES while one runs.
-local runStamp = 0
+-- st.endTrees keeps at most ENDTREES trees and TREE_NODES nodes between them (a tree spans its cluster: a city's on
+-- Leffe's maps holds up to 40,000 nodes, 2-3 MB a tree).
+local ENDTREES, TREE_NODES = 4, 65536
+-- Each Find stamps the entries it connects (pin): the trees of the walk under way are never the ones given up (a start
+-- without a height connects each of its surfaces: Ironforge's floors, whose trees spare a same-cluster walk its A*), so
+-- st.endTrees may hold more than ENDTREES while one runs. A batch (FindMany) pins its source's only: of its targets
+-- it keeps the costs.
+local runStamp, pin = 0, nil
 local function connect(st, swim, mult, k, node, back)
 	nodesOf(st, k)
 	local key = k .. ":" .. node .. ":" .. swim .. ":" .. (mult and mult.tag or "") .. (back and ":b" or "")
@@ -576,16 +579,22 @@ local function connect(st, swim, mult, k, node, back)
 		-- A handful of local trees removes repeated endpoint searches without retaining a continent's grids.
 		st.endTrees = st.endTrees or {}
 		st.endTrees[#st.endTrees + 1] = entry
-		entry.stamp = runStamp
-		if #st.endTrees > ENDTREES then
+		entry.stamp, entry.size = pin, grid(st, k).T
+		st.endNodes = (st.endNodes or 0) + entry.size
+		while #st.endTrees > ENDTREES or st.endNodes > TREE_NODES do
+			local gone
 			for i, old in ipairs(st.endTrees) do
 				if old.stamp ~= runStamp then
-					table.remove(st.endTrees, i)
-					if old.tree then
-						pool[#pool + 1], old.tree = old.tree, nil
-					end
+					gone = table.remove(st.endTrees, i)
 					break
 				end
+			end
+			if not gone then
+				break
+			end
+			st.endNodes = st.endNodes - gone.size
+			if gone.tree then
+				pool[#pool + 1], gone.tree = gone.tree, nil
 			end
 		end
 		if st.endCount >= (Path.endsMax or 256) then
@@ -593,7 +602,7 @@ local function connect(st, swim, mult, k, node, back)
 		end
 		st.ends[key], st.endCount = entry, st.endCount + 1
 	end
-	entry.stamp = runStamp
+	entry.stamp = pin
 	return entry.node, entry.edges, entry.tree, entry.yards, entry
 end
 
@@ -852,6 +861,7 @@ end
 -- Sliced A* and refinement share scratch trees; splitting adds hot-path calls and upvalues
 local function run(map, from, to, waterWalking, costOnly, profile, job, style, danger)
 	runStamp = runStamp + 1
+	pin = runStamp
 	local st = State(map)
 	if not st then
 		return nil, "nodata"
@@ -1343,6 +1353,7 @@ end
 -- One sliced Dijkstra owns the heap swap and frontier locals across endpoint searches
 local function runMany(map, from, targets, waterWalking, reverse, job, profile, style, danger)
 	runStamp = runStamp + 1
+	pin = runStamp
 	local costs, yards = job and job.costs or {}, job and job.yards or {}
 	local function failed(reason)
 		for i = 1, #targets do
@@ -1380,6 +1391,7 @@ local function runMany(map, from, targets, waterWalking, reverse, job, profile, 
 	local mult = weights(st, profile, style, danger)
 	local edged = edgeDanger(st, mult)
 	local starts, source, _, sourceYards = connectPoint(st, swim, mult, sk, sc, from.z, from.floors, reverse)
+	pin = nil -- the source's trees stay (a target in its cluster is priced on them); the targets' may go
 	local clusters, links, dist, dyards, closed, left = {}, {}, {}, {}, {}, #targets
 	local lifts = liftsOf(st, map)
 	-- Per prepared cluster with a landing: its targets, and per target the nodes it stands on (for a walk off a lift).

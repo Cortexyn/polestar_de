@@ -22,8 +22,11 @@ use forge_addontest::{emitted, Addon, RunAddon};
 /// KiB (Lua 5.1, 64-bit), measured on the shipped maps on 2026-10-23 (graph edges read where they lie in the
 /// graph string): load 35,137 / 37,695; live 85,961; allocated 160,949; at rest 40,484. On maps format 3
 /// (2026-10-24, grid 1.60.1.70532, the named area rows packed): load 35,322 / 38,097; live 84,526; allocated
-/// 163,620; at rest 40,702 (with every row packed, as the JS writer did: load 36,005 / 38,936).
-const BUDGET: [(&str, f64); 5] = [("loadResident", 35500.0), ("loadPeak", 38100.0), ("live", 88000.0), ("allocated", 165000.0), ("rest", 41500.0)];
+/// 163,620; at rest 40,702 (with every row packed, as the JS writer did: load 36,005 / 38,936). On Leffe's maps, one
+/// continent's part loaded (2026-10-25, decoded clusters as byte strings, endpoint trees pooled, the decoded graph
+/// read from its strings, Path.cacheKB 8 MB, Path.graphRestKB 1 MB), Eastern Kingdoms / Kalimdor: load 18,340 /
+/// 22,427 and 20,693 / 24,982; live 39,798 / 29,200; allocated 91,365 / 7,859; at rest 19,845 / 22,479.
+const BUDGET: [(&str, f64); 5] = [("loadResident", 22500.0), ("loadPeak", 25000.0), ("live", 40000.0), ("allocated", 92000.0), ("rest", 22500.0)];
 
 const WALKS: [(u32, [f64; 3], [f64; 3]); 5] = [
 	(0, [-8911.708, -130.583, 81.024], [-8680.25, -113.229, 91.141]),
