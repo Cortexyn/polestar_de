@@ -27,7 +27,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 /// A surface of his takes the area of ours when their heights are within this (our base heights are stored to 2 yd).
-pub const MATCH_YD: f64 = 3.0;
+pub const MATCH_YD: f64 = 6.0;
 /// An entrance keeps at most this many edges (the graph field's degree symbol).
 const DEGREE: usize = 63;
 

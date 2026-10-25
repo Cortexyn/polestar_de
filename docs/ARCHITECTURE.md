@@ -5638,7 +5638,7 @@ fileDataID from wago.tools into `data/sources/casc` (local, never shipped):
   stream reduces, at 4.17 yd cells, to steps inside one surface, steps his cells make, and his jumps, drops and
   climbs, each to the same or a neighbouring cell: those inside a cluster are the new `arc` field (one-way moves
   between the surfaces owning their ends, once per pair), those across a border are already his graph's. Each of his
-  surfaces takes the named WMOAreaTable row of our grid's surface in its cell nearest in height (within 3 yd), so the
+  surfaces takes the named WMOAreaTable row of our grid's surface in its cell nearest in height (within 6 yd), so the
   Undercity's floor names carry over; the chokepoints stay ours. The router steps along an arc like a grid step of its
   length, and a search out of a goal steps along them backwards (`Routing/Path.lua` search, `PathGrid.lua`
   decodeArcs). `--leffe-maps` picks the maps taken from his; the rest stay the grid's, byte for byte.

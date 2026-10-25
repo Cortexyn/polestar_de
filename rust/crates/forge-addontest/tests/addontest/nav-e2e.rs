@@ -309,8 +309,10 @@ fn a_polestars_world_frame_is_the_engines_known_unitposition_spots_and_guide_coo
 // of pathing v2: the format 2 path passes within the mouth's radius). This was the Fargodeep Mine's walk until maps
 // format 3: its "mouth" at -9842.4,135.3 lay 30 yd inside the mine on its bottom floor (Bernice's Necklace's chain
 // starts there, indoors, and gives no mouth since 8006432ed), and the guide's 39.5,82.4 (no height) now ends at the
-// mine's lower door, on the ground outside, short of any mouth.
-const MINE_MOUTH: [f64; 3] = [-9178.9, -599.5, 13.0];
+// mine's lower door, on the ground outside, short of any mouth. Since the chokepoints stand on the street, not on the
+// terrain buried under it (forge-nav's top surface under the open sky, 2026-10-25), the mouth is 13 yd further out,
+// 15 yd across.
+const MINE_MOUTH: [f64; 3] = [-9191.3, -604.0, 15.0];
 const IN_THE_MINE: &str = r#"guide(1429, 61.13, 49.28, "Jasperlode Mine")"#;
 
 #[test]
@@ -1479,7 +1481,8 @@ fn t_234_floor_off_the_undercitys_south_lift_indoors_the_walk_to_the_plundering_
 // Lifts (Fitz, 2026-10-23): the walking grid has no link between a lift's landings, so from the Undercity's lower
 // floor to Brill the walk went out through the sewers. The router joins the landings of Polestar_Nav's lift
 // chokepoints; the way in and out is one fixed chain (crossings.json, undercity-south-lift: Fitz's own walk), from the
-// south lift's bottom landing up through the entrance hall and out of the front, both ways.
+// south lift's bottom landing up through the entrance hall and out of the front, both ways (its three nodes over the
+// Ruins' courtyard and gate since 2026-10-25: three more legs out).
 #[test]
 fn lifts_from_the_undercitys_lower_floor_to_brill_the_walk_goes_to_the_south_lift_rides_it_up_and_follows_the_fixed_way_out_from_brill_in_the_same_way_down() {
 	skip_unless_ready!();
@@ -1521,6 +1524,9 @@ fn lifts_from_the_undercitys_lower_floor_to_brill_the_walk_goes_to_the_south_lif
 	let want = [
 		"walk|Walk to the lift",
 		"lift|Ride the elevator up",
+		"walk|Follow the path out",
+		"walk|Follow the path out",
+		"walk|Follow the path out",
 		"walk|Follow the path out",
 		"walk|Follow the path out",
 		"walk|Follow the path out",
