@@ -27,10 +27,12 @@ so "walks found" is one of the things we check.
 Forge asks two sets of maps for walks:
 
 - **our walking grid**, built from the game's data on your own machine;
-- **Leffe's navigation maps**. Leffe made them and lets Polestar use them, with his permission.
+- **Leffe's navigation maps**. Leffe made them and lets Polestar use what they give, with his
+  permission. His maps are private: only people he gives access to have them. The walks they
+  answered ship in the data pack's walk stores (numbers, no map geometry).
 
-By default Forge uses both (the **hybrid**, described below) when Leffe's maps are present, and our
-grid alone when they are not.
+By default Forge uses both (the **hybrid**, described below) when Leffe's maps or his saved walks
+are present, and our grid alone when neither is.
 
 ## Where the walks stage sits
 
@@ -42,12 +44,12 @@ reads the world and writes, per faction:
 |---|---|
 | `walks-<faction>.bin` | the walks the routes stage reads |
 | `store-<faction>.psbn` | the walk store: every answer our grid has given, kept for the next build |
-| `store-leffe-<faction>.psbn` | the same for Leffe's maps (hybrid and `--nav leffe` only) |
+| `store-leffe-<faction>.psbn` | the same for Leffe's maps (hybrid and `--nav leffe` only), with each place's zone on his maps; without his maps, the data pack's copy is read and never written |
 | `store-<faction>.navfp` | the walk store's tag, when it was seeded from the data pack |
 
 Like every stage, it is skipped when its inputs have not changed (the stage's key is in
 `<out>/.forge/walks.key`). The key includes the world, the backend, the grid's files and, when
-used, Leffe's maps.
+used, Leffe's maps or the saved Leffe stores (their size and time).
 
 ## Our walking grid
 
@@ -268,10 +270,12 @@ Warm, a stored walk is answered in about a tenth of a microsecond.
 ## Leffe's navigation maps
 
 Leffe's navigation maps are a separate set of walking maps for the game. Leffe made
-them and gave Polestar full permission to use them. They are credited wherever Forge uses them:
-the build log, the walks stats (`nav: { backend, pack }`) and the report's data sources. Licences
-and every other credit are in [rust/NOTICE.md](../../rust/NOTICE.md) and the data pack's
-`manifest.json`.
+them and lets Polestar use what they give. His maps are **private**: they are never in the
+repository, the data pack or a release. What ships is derived from them: the walks they answered
+(the data pack's Leffe walk stores) and the baked legs drawn on them. Both are credited wherever
+Forge uses them: the build log, the walks stats (`nav: { backend, pack }`) and the report's data
+sources. Licences and every other credit are in [rust/NOTICE.md](../../rust/NOTICE.md) and the
+data pack's `manifest.json`.
 
 Forge reads them at build time only. The in-game arrow is not affected. The reader (`forge_nav::f4`)
 is a bit-for-bit port of his own reader: same search order, same ties, same arithmetic. It walks
@@ -283,11 +287,26 @@ ends' zones exempt (`f4walks.rs`).
 In this order:
 
 1. `--leffe <dir>` on `forge build`;
-2. the `POLESTAR_LEFFE_NAV` environment variable;
-3. `leffe-nav` inside the data pack folder. `forge data fetch` downloads it as its own release
-   asset, beside the pack.
+2. the `POLESTAR_LEFFE_NAV` environment variable.
 
 The folder must hold `Nav/Nav.xml` (or `Nav.xml` directly). The maps are about 1 GB.
+
+### Without his maps: his saved walks
+
+Every walk a build asks of his maps is kept in `store-leffe-<faction>.psbn` by its two ends and
+his pack's content key, and the store also keeps each place's zone on his maps (the danger bands'
+tables are priced over it). `forge data pack` ships those stores. A build without his maps
+(`stage::Nav::HybridSaved`, `SavedF4Backend` in `f4walks.rs`):
+
+- finds them in the data pack's `walks/` (else in `<out>/walks/` from an earlier build with his
+  maps), for every faction;
+- runs the hybrid with his saved walks in place of his maps: a walk the store holds is his; a walk
+  it lacks (a place new since the pack was built) has no answer from him, so the hybrid takes our
+  grid's, exactly as when his maps have no way;
+- reads the store and never writes it, so a later build with his maps still asks him those walks;
+- uses the pack his store holds the most walks of (a store keeps older packs' walks too).
+
+The legs stage needs his maps; without them the legs are drawn on our grid.
 
 ### What they do well and what they lack
 
@@ -330,10 +349,11 @@ missing walks.
 How to choose:
 
 - `forge build --nav grid|leffe|hybrid`. Without `--nav`, the build uses `hybrid` when it finds
-  Leffe's maps and `grid` when it does not. Asking for `leffe` or `hybrid` without the maps is an
-  error.
+  Leffe's maps or his saved walks for every faction, and `grid` when it finds neither. Asking for
+  `leffe` without his maps, or `hybrid` with neither, is an error.
 - `forge walks walks` (the stage on its own) reads `POLESTAR_NAV`: `grid`, `leffe` or `hybrid`.
-  Without it, it uses `hybrid` when `POLESTAR_LEFFE_NAV` names Leffe's Nav folder, else `grid`.
+  Without it, it uses `hybrid` when `POLESTAR_LEFFE_NAV` names Leffe's Nav folder or his saved
+  walks lie beside the store (`<store>-leffe.<ext>`), else `grid`.
 
 ## Flights, boats, lifts and hearthstones
 
@@ -578,12 +598,15 @@ The grid has no `walk/` files for the current `builtAt`. This happens after `nav
 There is no road mask, or there are masks from two road layers. Run `forge nav prepare` after
 `forge nav layers roads`. Delete the stale `walk/roads-0-*.bin`, keeping the newest.
 
-**`--nav Hybrid: Leffe's navigation maps not found (…)`**
-Pass `--leffe <dir>`, set `POLESTAR_LEFFE_NAV`, or run `forge data fetch`. The folder must contain
-`Nav/Nav.xml` or `Nav.xml`.
+**`--nav Hybrid: Leffe's navigation maps not found (…), and no saved Leffe walks`**
+Pass `--leffe <dir>` or set `POLESTAR_LEFFE_NAV` (his maps, if Leffe gave you access), or run
+`forge data fetch` for his saved walks. The maps' folder must contain `Nav/Nav.xml` or `Nav.xml`.
 
 **`POLESTAR_NAV=leffe needs POLESTAR_LEFFE_NAV=<Leffe's Nav folder>`** (or `POLESTAR_NAV=hybrid needs …`)
 Same, for `forge walks walks`.
+
+**`<store>: no saved walks on Leffe's maps`**
+The saved Leffe store holds no walk of his. Fetch the data pack again, or build with `--nav grid`.
 
 **`walks: the data pack's store-<faction>.psbn was built on another grid … routing the walks again`**
 This is not an error. Your grid differs from the pack's, so the walks are routed afresh. That is
