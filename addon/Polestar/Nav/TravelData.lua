@@ -1166,6 +1166,9 @@ N.RegisterCrossings({
 	chains = {
 		{ id = "undercity-south-lift", name = "Undercity", open = "both", nodes = {
 			{ map = 1420, c = 0, wx = 1880.9, wy = 238, z = 60, r = 30 },
+			{ map = 1458, c = 0, wx = 1849.1, wy = 236.6, z = 61, r = 12 },
+			{ map = 1458, c = 0, wx = 1807.5, wy = 230.1, z = 62, r = 20 },
+			{ map = 1458, c = 0, wx = 1765.9, wy = 236.3, z = 63, r = 12 },
 			{ map = 1458, c = 0, wx = 1733.2, wy = 222.1, z = 64, r = 12 },
 			{ map = 1458, c = 0, wx = 1656.2, wy = 239.7, z = 63, r = 12 },
 			{ map = 1458, c = 0, wx = 1620.4, wy = 221.4, z = 63, r = 10 },
