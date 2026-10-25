@@ -159,16 +159,22 @@ impl WalkStore {
 		self.end_of(e).and_then(|i| self.zones.get(&i).copied())
 	}
 
-	/// The Leffe pack (`leffe:<id>` models' id) holding the most answers: the pack the store's
-	/// Leffe walks were last built on (a store keeps older packs' answers too).
-	pub fn leffe_pack(&self) -> Option<String> {
-		let mut n: FxHashMap<&str, usize> = FxHashMap::default();
+	/// The Leffe pack (`leffe:<id>` models' id) and lift layer (`lifts=` of their params) holding the most
+	/// answers of the current f4 answer version: what the store's Leffe walks were last built on (a store
+	/// keeps older packs' and versions' answers too).
+	pub fn leffe_pack(&self) -> Option<(String, String)> {
+		let v = format!("|v={}", crate::f4walks::MODEL_VERSION);
+		let mut n: FxHashMap<(&str, &str), usize> = FxHashMap::default();
 		for &(_, _, m) in self.answers.keys() {
-			if let Some(id) = self.models[m as usize].grid.strip_prefix("leffe:") {
-				*n.entry(id).or_default() += 1;
+			let model = &self.models[m as usize];
+			let Some(id) = model.grid.strip_prefix("leffe:") else { continue };
+			if !model.params.ends_with(&v) {
+				continue;
 			}
+			let lifts = model.params.split('|').find_map(|p| p.strip_prefix("lifts=")).unwrap_or("none");
+			*n.entry((id, lifts)).or_default() += 1;
 		}
-		n.into_iter().max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(a.0))).map(|(id, _)| id.to_string())
+		n.into_iter().max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0))).map(|((id, l), _)| (id.to_string(), l.to_string()))
 	}
 
 	pub fn model(&mut self, m: &Model) -> u32 {
