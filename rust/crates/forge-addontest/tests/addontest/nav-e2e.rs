@@ -250,7 +250,7 @@ fn a_polestars_world_frame_is_the_engines_known_unitposition_spots_and_guide_coo
 			local cell = G.cellOf(st, k, n)
 			local cx = st.x0 + (floor(k / st.ny) * st.C + floor(cell / st.C) + 0.5) * st.cs
 			local cy = st.y0 + ((k % st.ny) * st.C + cell % st.C + 0.5) * st.cs
-			return { d = dist(cx, cy, x, y), z = st.z[k][n + 1] }
+			return { d = dist(cx, cy, x, y), z = G.zOf(G.grid(st, k), n) }
 		end
 		local function spot(map, ux, uy, uz)
 			-- UnitPosition -> Polestar's map coordinates -> Polestar's world point -> the engine's node there.
