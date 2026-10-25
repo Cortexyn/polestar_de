@@ -86,7 +86,11 @@ collectgarbage("stop")"#;
 fn script(map: u32) -> String {
 	let walks: Vec<String> = WALKS.iter().filter(|w| w.0 == map).map(|(m, a, b)| format!("{{ {m}, {}, {} }}", point(a), point(b))).collect();
 	let places: Vec<String> = PLACES.iter().map(point).collect();
-	let batch = if map == 0 { format!("Path.FindMany(0, {}, {{ {} }}, function(costs) answered(costs ~= nil) end, {{ profile = \"Horde\" }})\ndrain()", point(&WALKS[1].2), places.join(", ")) } else { String::new() };
+	let batch = if map == 0 {
+		format!("Path.FindMany(0, {}, {{ {} }}, function(costs) answered(costs ~= nil) end, {{ profile = \"Horde\" }})\ndrain()", point(&WALKS[1].2), places.join(", "))
+	} else {
+		String::new()
+	};
 	format!(
 		r#"
 local part = PolestarPathData[{map}] and PolestarPathData[{map}].part

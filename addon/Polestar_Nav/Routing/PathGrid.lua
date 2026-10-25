@@ -1542,6 +1542,19 @@ function Path.HasData(map)
 	return Data(map) ~= nil
 end
 
+-- Is map's walking data in memory: Polestar_Nav's own maps, or a map whose part addon (maps format 5) has loaded? A
+-- search on a map that is not loads its part first (State, EnsurePart): Polestar asks for walks only on its player's
+-- continent and on resident ones, so the other continent's part loads when the player gets there.
+---@param map number
+---@return boolean
+function Path.Resident(map)
+	local D = Data(map)
+	if not D then
+		return false
+	end
+	return not D.part or D.partReady == true or (type(D.packed) == "table" and type(D.packed.grid) == "table" and next(D.packed.grid) ~= nil)
+end
+
 ---@param map number
 ---@return boolean
 function Path.IsLoaded(map)

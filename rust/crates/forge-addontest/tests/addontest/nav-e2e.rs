@@ -484,6 +484,58 @@ fn the_arrows_walk_find_answers_before_walk_measures_batch_findmany_gets_any_sli
 	assert_eq!(out["done"], true, "the batch completes after it");
 }
 
+// One continent's walking maps at a time (Fitz, 2026-10-25: 137 MB in the AddOn Memory readout with both of Leffe's
+// continents): a journey to the other continent searches and measures only the walks on the player's own, so only its
+// part of Polestar_Nav loads (Polestar_Nav_EK in Brill); the walk at the far end keeps the planner's straight estimate.
+// The other part loads once the player is there (Nav/Walk.lua canSearch, Path.Resident).
+#[test]
+fn a_journey_to_the_other_continent_loads_only_the_players_continents_walking_maps_the_other_part_on_arrival() {
+	skip_unless_ready!();
+	if !addons_dir().join("Polestar_Nav_Kalimdor").is_dir() {
+		eprintln!("skipped: no continent parts (the walking maps are not Leffe's)");
+		return;
+	}
+	let out = run(
+		r#"
+		w.setLevel(20)
+		w.faction = "Horde"
+		local loads, asked = {}, {}
+		local load = C_AddOns.LoadAddOn
+		C_AddOns.LoadAddOn = function(name) loads[#loads + 1] = name return load(name) end
+		for _, name in ipairs({ "FindMany", "FindCoarse", "FindCost" }) do
+			local real = E[name]
+			E[name] = function(map, ...) asked[map] = (asked[map] or 0) + 1 return real(map, ...) end
+		end
+		place(1420, 2249.1, 236.8, 41.3) -- Brill
+		N.SetTarget(1411, 56.31, 75.11, "Sen'jin Village", "e")
+		for _ = 1, 400 do aim() stub.advance(0.05) end
+		local legs, ci = N.GetRoute()
+		local far, finite = 0, true
+		for i = ci or 1, legs and #legs or 0 do
+			local l = legs[i]
+			if l.kind == "walk" and l.from.c == 1 and l.to.c == 1 then far = far + 1 end
+			if l.seconds ~= l.seconds or l.seconds == math.huge then finite = false end
+		end
+		local finds1 = 0
+		for _, rec in ipairs(finds) do if rec.map == 1 then finds1 = finds1 + 1 end end
+		local r = { loads = table.concat(loads, ","), resident1 = E.Resident(1), far = far, finite = finite, finds1 = finds1, asked1 = asked[1] or 0, asked0 = asked[0] or 0 }
+		-- Off the zeppelin at Razor Hill: Kalimdor's part loads with the first walk there.
+		local _, px, py = C.MapToWorld(1411, 51.85, 43.49, "e")
+		place(1411, px, py, 11.7)
+		for _ = 1, 200 do aim() stub.advance(0.05) end
+		r.arrived = { loads = table.concat(loads, ","), resident1 = E.Resident(1) }
+		emit(r)"#,
+		false,
+	);
+	assert_eq!(out["loads"], "Polestar_Nav_EK", "in Brill only the Eastern Kingdoms' part loads");
+	assert_eq!(out["resident1"], false);
+	assert_eq!((f(&out["finds1"]), f(&out["asked1"])), (0.0, 0.0), "nothing is searched or measured on Kalimdor from Brill");
+	assert!(f(&out["asked0"]) > 0.0, "the walks on the Eastern Kingdoms are");
+	assert!(f(&out["far"]) >= 1.0 && out["finite"] == true, "the walk on Kalimdor stays in the journey, timed by its estimate");
+	assert_eq!(out["arrived"]["loads"], "Polestar_Nav_EK,Polestar_Nav_Kalimdor", "Kalimdor's part loads on arrival");
+	assert_eq!(out["arrived"]["resident1"], true);
+}
+
 // Forever's client answers UnitPosition with a height of exactly 0 (reported from Ratchet's flight master,
 // 2026-10-16, where the ground is at 12 yd). Taken as real, the search started on the nearest surface within 10 yd
 // of 0, 20 yd down the slope towards the harbour, and the line went there and back.
@@ -1656,7 +1708,8 @@ fn lifts_walking_the_undercitys_canal_ring_from_the_auction_house_with_no_height
 // graph, a walk inside one cluster its own path), and no later. Before, a walk from a crossing's far end was hand-made
 // (drawn and walked straight) and the others were searched only after the measure: from Mulgore below Thunder Bluff a
 // straight line across Mulgore and straight segments north along the Stonetalon range. A walk leg drawn with two
-// points is only one the engine's own path walks straight.
+// points is only one the engine's own path walks straight, or one on another continent than the player's while its
+// walking maps are not loaded (they load when the player gets there: one continent's at a time).
 const SHAPES: &str = r#"
 -- The walk legs as drawn when the measure's batch answers (before any later walk's own search may run): label, the
 -- points, and the ends of a two-point one; checked afterwards against the engine's path between those ends.
@@ -1667,11 +1720,13 @@ E.FindMany = function(map, from, targets, callback, ...)
 			atMeasure = {}
 			local g = N.GetRouteGeometry()
 			local legs, ci = N.GetRoute()
+			local pc = C.GetPlayerWorldPosition()
 			for i, l in ipairs(g and g.legs or {}) do
 				local leg = legs and legs[ci + i - 1]
 				if l.kind == "walk" and leg and leg.kind == "walk" then
 					local p = l.pts
-					atMeasure[#atMeasure + 1] = { label = leg.label, n = #p, handmade = leg.handmade or false, ends = #p == 2 and { p[1][1], p[1][2], p[1][3], p[2][2], p[2][3] } or nil }
+					local far = leg.from.c ~= pc and not E.Resident(leg.from.c)
+					atMeasure[#atMeasure + 1] = { label = leg.label, n = #p, handmade = leg.handmade or false, far = far, ends = #p == 2 and not far and { p[1][1], p[1][2], p[1][3], p[2][2], p[2][3] } or nil }
 				end
 			end
 		end
@@ -1689,7 +1744,7 @@ local function shapes(steps)
 			local full = E.FindSync(e[1], { x = e[2], y = e[3] }, { x = e[4], y = e[5] }, { profile = w.faction })
 			engine = full and #full or 0
 		end
-		out[#out + 1] = { label = l.label, n = l.n, handmade = l.handmade, engine = engine }
+		out[#out + 1] = { label = l.label, n = l.n, handmade = l.handmade, engine = engine, far = l.far }
 	end
 	return out
 end
@@ -1705,15 +1760,15 @@ fn check_shapes(legs: &Value, min: usize) {
 				l["label"].as_str().unwrap_or(""),
 				l["n"],
 				if l["engine"].is_null() { String::new() } else { format!(" (engine {})", l["engine"]) },
-				if l["handmade"] == true { " hand-made" } else { "" }
-			))
+				if l["handmade"] == true { " hand-made" } else { "" },
+			) + if l["far"] == true { " (another continent)" } else { "" })
 			.collect::<Vec<_>>()
 			.join("; ")
 	);
 	assert!(legs.len() >= min, "the route walks {} legs", legs.len());
 	for l in &legs {
 		let n = f(&l["n"]);
-		assert!(n > 2.0 || (n == 2.0 && l["engine"].as_f64().is_some_and(|e| e <= 2.0)), "{}: drawn with {n} points while the engine's path has {}", l["label"], l["engine"]);
+		assert!(n > 2.0 || (n == 2.0 && (l["far"] == true || l["engine"].as_f64().is_some_and(|e| e <= 2.0))), "{}: drawn with {n} points while the engine's path has {}", l["label"], l["engine"]);
 	}
 }
 
