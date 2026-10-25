@@ -200,7 +200,7 @@ Every variable Forge reads. Command-line options win over them where both exist.
 | `POLESTAR_LEFFE_NAV` | `forge build`, `forge doctor`, `forge walks walks` | Leffe's navigation maps, private (the folder with `Nav.xml` or `Nav/Nav.xml`; `--leffe` wins) | none: without his maps the hybrid runs on the data pack's saved Leffe walks |
 | `POLESTAR_LEFFE_NAV_CACHE_MB` | `forge walks walks` with `POLESTAR_NAV=leffe` | the cache for Leffe's decoded map pieces, in MB | 1,024 (`forge build` and the hybrid use 2,048) |
 | `POLESTAR_NAV` | `forge walks walks` only | the walks backend: `grid`, `leffe` or `hybrid` (`forge build` takes `--nav`) | `hybrid` when `POLESTAR_LEFFE_NAV` names the maps or his saved walks lie beside the store, else `grid` |
-| `POLESTAR_NAV_FP` | `forge build` (walks), `forge data pack` | the walk model tag written into walks files and the pack's manifest | the store's `.navfp` tag (seeded from the data pack), else `forge-<walks version>` |
+| `POLESTAR_NAV_FP` | `forge build` (walks), `forge data pack` | the walk model tag written into walks files and the pack's manifest | `forge-<walks version>` |
 | `POLESTAR_DATA_PACK` | `forge data fetch`, `forge build`, `forge doctor` | the data pack folder (`--dest` / `--pack` win) | `polestar/data-pack` in your data folder |
 | `POLESTAR_DATA_PACK_URL` | `forge data fetch` | the pack's index (`--url` wins) | `polestar-data-pack.json` of the `data-pack` release |
 | `POLESTAR_KB` | `forge build` (routes), `forge sim` | the knowledge base file | `data/local/kb/forever-kb.sqlite` |

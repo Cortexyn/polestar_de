@@ -45,7 +45,6 @@ reads the world and writes, per faction:
 | `walks-<faction>.bin` | the walks the routes stage reads |
 | `store-<faction>.psbn` | the walk store: every answer our grid has given, kept for the next build |
 | `store-leffe-<faction>.psbn` | the same for Leffe's maps (hybrid and `--nav leffe` only), with each place's zone on his maps; without his maps, the data pack's copy is read and never written |
-| `store-<faction>.navfp` | the walk store's tag, when it was seeded from the data pack |
 
 Like every stage, it is skipped when its inputs have not changed (the stage's key is in
 `<out>/.forge/walks.key`). The key includes the world, the backend, the grid's files and, when
@@ -668,10 +667,6 @@ Same, for `forge walks walks`.
 
 **`<store>: no saved walks on Leffe's maps`**
 The saved Leffe store holds no walk of his. Fetch the data pack again, or build with `--nav grid`.
-
-**`walks: the data pack's store-<faction>.psbn was built on another grid … routing the walks again`**
-This is not an error. Your grid differs from the pack's, so the walks are routed afresh. That is
-slower, but correct.
 
 **`hybrid: the two walks documents are of different worlds`**
 `forge walks hybrid` was given walks files built from different worlds. Rebuild both from the same

@@ -857,19 +857,14 @@ pub fn build(o: &BuildOpts, log: &mut dyn FnMut(&str)) -> Result<Vec<StageRun>, 
 					let build = forge_world::data::forever_build(&forge_world::data::DirSource::repo(&l.stage_root)).ok_or("no cached Forever AreaTable in data/sources/wago")?;
 					let area_table = l.stage_root.join(format!("data/sources/wago/{build}/AreaTable.csv"));
 					let store = l.walks.join(format!("store-{}.psbn", f.lower()));
-					let fp_file = l.walks.join(format!("store-{}.navfp", f.lower()));
 					let leffe_store = l.walks.join(format!("store-leffe-{}.psbn", f.lower()));
-					if let (Some(dir), Some(m)) = (&pack_dir, &pack_manifest) {
-						if !store.exists() {
-							seed_store(dir, m, &l.grid, &format!("store-{}.psbn", f.lower()), &store, Some(&fp_file), log)?;
-						}
-						if nav != Nav::Grid && leffe.is_some() && !leffe_store.exists() {
-							// His walks are kept by his maps' content: a store built on other maps only misses.
-							let src = dir.join("walks").join(format!("store-leffe-{}.psbn", f.lower()));
-							if src.is_file() {
-								std::fs::copy(&src, &leffe_store).map_err(|e| format!("{} -> {}: {e}", src.display(), leffe_store.display()))?;
-								log(&format!("  walks: store-leffe-{}.psbn seeded from the data pack", f.lower()));
-							}
+					// The data pack carries Leffe's walks only (our grid's stores are keyed by the grid they
+					// were built on, and every contributor builds their own); his are kept by his maps' content.
+					if let (Some(dir), true) = (&pack_dir, nav != Nav::Grid && leffe.is_some() && !leffe_store.exists()) {
+						let src = dir.join("walks").join(format!("store-leffe-{}.psbn", f.lower()));
+						if src.is_file() {
+							std::fs::copy(&src, &leffe_store).map_err(|e| format!("{} -> {}: {e}", src.display(), leffe_store.display()))?;
+							log(&format!("  walks: store-leffe-{}.psbn seeded from the data pack", f.lower()));
 						}
 					}
 					let backend = match (&nav, &leffe) {
@@ -881,8 +876,7 @@ pub fn build(o: &BuildOpts, log: &mut dyn FnMut(&str)) -> Result<Vec<StageRun>, 
 						_ => forge_nav::stage::Nav::Grid,
 					};
 					let store = if nav == Nav::Leffe { leffe_store.clone() } else { store };
-					let nav_fp =
-						std::env::var("POLESTAR_NAV_FP").ok().or_else(|| std::fs::read_to_string(&fp_file).ok().map(|s| s.trim().to_string())).unwrap_or_else(|| format!("forge-{WALKS_VERSION}"));
+					let nav_fp = std::env::var("POLESTAR_NAV_FP").unwrap_or_else(|_| format!("forge-{WALKS_VERSION}"));
 					let say = |m: &str| eprintln!("forge:   walks {}: {m}", f.name());
 					let w = forge_nav::stage::walks(&forge_nav::stage::WalksIn {
 						world_json: &world_json,
@@ -1078,28 +1072,6 @@ pub fn build(o: &BuildOpts, log: &mut dyn FnMut(&str)) -> Result<Vec<StageRun>, 
 		return Err(format!("--strict: {} fix(es) no longer apply (fixes.md lists them)", blocking.len()));
 	}
 	Ok(runs)
-}
-
-/// Seed `<out>/walks/store-<faction>.psbn` from the data pack when the grid in use has the
-/// content hash the pack's stores were built on (else the walks are routed again), with the walk
-/// model fingerprint they were built with.
-fn seed_store(dir: &Path, m: &Value, grid: &Path, name: &str, store: &Path, fp_file: Option<&Path>, log: &mut dyn FnMut(&str)) -> Result<(), String> {
-	let src = dir.join("walks").join(name);
-	let Some(want) = m["walks"]["grid"].as_str() else { return Ok(()) };
-	if !src.is_file() {
-		return Ok(());
-	}
-	let have = pack::grid_hash(grid)?;
-	if have != want {
-		log(&format!("  walks: the data pack's {name} was built on another grid ({} vs yours {}): routing the walks again", &want[..12], &have[..12]));
-		return Ok(());
-	}
-	std::fs::copy(&src, store).map_err(|e| format!("{} -> {}: {e}", src.display(), store.display()))?;
-	if let (Some(fp), Some(file)) = (m["walks"]["navFp"].as_str(), fp_file) {
-		std::fs::write(file, fp).map_err(|e| e.to_string())?;
-	}
-	log(&format!("  walks: {name} seeded from the data pack (grid {})", &want[..12]));
-	Ok(())
 }
 
 /// The report's line on the data the build ran on: data/forever meta.json's sources, and whether
