@@ -212,6 +212,16 @@ AddOns folder and `pack.json`; `forge doctor` checks what Forge finds (the
 game, the data, Leffe's maps, the walking grid). `node tools/polestar.js
 help` and `forge --help` list their commands.
 
+**Generating routes and guides with `forge build`.** Leffe's navigation maps
+are private; the data pack carries the walks they answered, so your build runs
+the same hybrid as the maintainers' wherever those walks reach, and our own
+grid for the rest and for the baked legs. Your build is a check, not the
+release: send the change to the sources (guides, corrections,
+`data/route-fixes.json`), not the generated guides, and compare against your
+own build of the same commit without your change. The maintainers rebuild the
+shipped guides with his maps after merging
+([docs/FORGE.md](docs/FORGE.md#building-as-a-contributor)).
+
 ## Checks
 
 Run only the checks for what you changed. CI runs the full suite on every

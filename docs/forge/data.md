@@ -551,8 +551,10 @@ from your own game client instead (`forge build --wow <path>`).
   the nav map list, the shipped zone crossings;
 - the KB's public part (below), including Factoruide's facts (its databases are GPL-2.0-or-later, taken
   under GPL-3.0);
-- walk stores: walking times between the world's points, per faction (see [nav.md](nav.md));
-- as a separate download, Leffe's navigation maps, made by Leffe and used with his permission.
+- walk stores: walking times between the world's points, per faction (see [nav.md](nav.md)),
+  including the walks answered on Leffe's navigation maps (`store-leffe-*`, published with his
+  permission). His maps themselves are private and never in the pack: the private-data guard
+  refuses a pack holding them.
 
 Every file's source, licence and credit is in the pack's `manifest.json`. That file, with
 [rust/NOTICE.md](../../rust/NOTICE.md) and [THIRD_PARTY.md](../../THIRD_PARTY.md), is the place for
@@ -598,7 +600,7 @@ forge data fetch --url ./dist/polestar-data-pack.json   # a local or test pack
 1. It reads the index, `polestar-data-pack.json`: by default from the `data-pack` release, or
    `$POLESTAR_DATA_PACK_URL`, or `--url` (a URL, a local path, or `file://`).
 2. It downloads the archive next to the index, `polestar-data-pack.tar.gz`, and each separate asset
-   (Leffe's navigation maps are `polestar-leffe-nav.tar.gz`).
+   the index lists (none today).
 3. It checks each archive's size and **BLAKE3** checksum against the index, and refuses an archive that
    does not match ("not the published pack").
 4. It unpacks into a temporary folder next to the destination, and refuses any path outside it.
@@ -624,14 +626,15 @@ It looks for the pack at `--pack DIR`, else at the default fetch destination. It
 message when there is no pack ("run `forge data fetch`"), or when it finds neither a game client to
 build the grid from nor a built grid (`--grid`). It logs
 `no local sources in …: using the data pack …`, then builds the grid and the data from your client
-and the pack's files, with your installed Forever's quest data when it finds it. It uses Leffe's maps from the
-pack when no other copy is given. The report says which data sources the build ran on, so a
+and the pack's files, with your installed Forever's quest data when it finds it. Without Leffe's
+maps (private) it runs the hybrid on the pack's saved Leffe walks (nav.md, "Without his maps: his
+saved walks"). The report says which data sources the build ran on, so a
 public-data route is never mistaken for the official build.
 
 ### `forge data pack` (maintainers)
 
 ```sh
-forge data pack --out dist --walks-from out --leffe /path/to/leffe-nav
+forge data pack --out dist --walks-from out
 ```
 
 - `--root DIR`: the checkout to pack from (default: the nearest folder above with `data/sources`).
@@ -639,11 +642,12 @@ forge data pack --out dist --walks-from out --leffe /path/to/leffe-nav
   stores.
 - `--grid DIR`: the grid those stores were built on (default `data/local/nav4`). Its content hash is
   recorded in the manifest. Set `POLESTAR_NAV_FP` to the walk model fingerprint of that build.
-- `--leffe DIR`: Leffe's navigation maps (the folder with `PACK.json` and `Nav/`), packed as their own
-  asset.
 
-It writes `dist/polestar-data-pack.tar.gz`, `dist/polestar-leffe-nav.tar.gz`, a `.blake3` file
-beside each, and the index `dist/polestar-data-pack.json`. The archives are deterministic: the same
+Build the `--walks-from` output with Leffe's maps (`--leffe`), so its `store-leffe-*.psbn` hold his
+walks and each place's zone on his maps. Never pass his maps to the pack: they are private.
+
+It writes `dist/polestar-data-pack.tar.gz`, a `.blake3` file
+beside it, and the index `dist/polestar-data-pack.json`. The archives are deterministic: the same
 files give the same bytes.
 
 **The private-data guard.** Before writing any archive, `forge data pack` scans everything it gathered:

@@ -19,8 +19,9 @@ see its AUTHORS file), GPL-2.0-or-later, used here under GPL-3.0.
 
 ## Leffe's navigation maps
 
-Forge reads Leffe's navigation maps (format 4) to price walks, and the data pack carries them as
-their own download, with Leffe's full permission. Thank you, Leffe.
+Forge reads Leffe's navigation maps (format 4) to price walks, with Leffe's permission. His maps are
+private and never ship; the walks they answered (the data pack's Leffe walk stores) and the walks
+baked into the guides are published with his permission. Thank you, Leffe.
 
 ## Factoruide
 
