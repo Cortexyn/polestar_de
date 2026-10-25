@@ -140,7 +140,11 @@ once.
 For each pair the store does not already know, the walker (`walker.rs`) does this:
 
 1. **Snap** both ends to a surface: the column under the place's x, y, then the floor nearest its
-   height. A place with no height takes the column's usual floor.
+   height. A place with no height takes the column's usual floor: inside a building its lowest
+   indoor floor; outdoors the top surface under the open sky, else the highest terrain. Under a
+   city's streets, a harbour's decks or a bridge lies the terrain the models were built over
+   (Stormwind's, Booty Bay's, Darnassus's); a place there stands on the street, not on that buried
+   ground.
 2. **Straight line.** If the straight line between the ends is plain walking all the way, that
    line is the walk. Plain means no road, water, steep face, enemy town or danger. This idea is
    adapted from Factoruide's route search. We only accept the line when its cost is within 0.2 % of
