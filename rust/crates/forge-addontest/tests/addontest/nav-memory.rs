@@ -24,9 +24,10 @@ use forge_addontest::{emitted, Addon, RunAddon};
 /// (2026-10-24, grid 1.60.1.70532, the named area rows packed): load 35,322 / 38,097; live 84,526; allocated
 /// 163,620; at rest 40,702 (with every row packed, as the JS writer did: load 36,005 / 38,936). On Leffe's maps, one
 /// continent's part loaded (2026-10-25, decoded clusters as byte strings, endpoint trees pooled, the decoded graph
-/// read from its strings, Path.cacheKB 8 MB, Path.graphRestKB 1 MB), Eastern Kingdoms / Kalimdor: load 18,340 /
-/// 22,427 and 20,693 / 24,982; live 39,798 / 29,200; allocated 91,365 / 7,859; at rest 19,845 / 22,479.
-const BUDGET: [(&str, f64); 5] = [("loadResident", 22500.0), ("loadPeak", 25000.0), ("live", 40000.0), ("allocated", 92000.0), ("rest", 22500.0)];
+/// read from its strings, Path.cacheKB 8 MB, Path.graphRestKB 1 MB; the parts guarded against a dropped map),
+/// Eastern Kingdoms / Kalimdor: load 18,341 / 22,428 and 20,717 / 25,016; live 39,799 / 29,201; allocated 91,361 /
+/// 7,859; at rest 19,846 / 22,480.
+const BUDGET: [(&str, f64); 5] = [("loadResident", 22500.0), ("loadPeak", 25100.0), ("live", 40000.0), ("allocated", 92000.0), ("rest", 22500.0)];
 
 const WALKS: [(u32, [f64; 3], [f64; 3]); 5] = [
 	(0, [-8911.708, -130.583, 81.024], [-8680.25, -113.229, 91.141]),

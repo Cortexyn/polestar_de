@@ -606,7 +606,12 @@ pub fn pack_files(map: u32, cg: &CellGrid, maps: &Maps, global: &str, gen: &str,
 	meta.push("}".into());
 	meta.push(String::new());
 	files.push((format!("Nav{map}.lua"), meta.join("\n")));
-	let header = format!("{gen}\n{PART_NOTE}\n---@type SPFNavData\nlocal data = {global}[{map}]\n-- stylua: ignore start\n");
+	// A continent's part addon may load where Polestar_Nav dropped its map (API.lua: no decoder, a part missing) or
+	// never loaded: it then adds nothing.
+	let header = match addon {
+		Some(_) => format!("{gen}\n{PART_NOTE}\n---@type SPFNavData\nlocal data = {global} and {global}[{map}]\nif not data then return end\n-- stylua: ignore start\n"),
+		None => format!("{gen}\n{PART_NOTE}\n---@type SPFNavData\nlocal data = {global}[{map}]\n-- stylua: ignore start\n"),
+	};
 	let mut part = 1;
 	let folder = addon.map_or(String::new(), |a| format!("{a}/"));
 	let mut content = header.clone();
