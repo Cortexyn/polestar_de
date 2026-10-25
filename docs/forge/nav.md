@@ -140,7 +140,11 @@ once.
 For each pair the store does not already know, the walker (`walker.rs`) does this:
 
 1. **Snap** both ends to a surface: the column under the place's x, y, then the floor nearest its
-   height. A place with no height takes the column's usual floor.
+   height. A place with no height takes the column's usual floor: inside a building its lowest
+   indoor floor; outdoors the top surface under the open sky, else the highest terrain. Under a
+   city's streets, a harbour's decks or a bridge lies the terrain the models were built over
+   (Stormwind's, Booty Bay's, Darnassus's); a place there stands on the street, not on that buried
+   ground.
 2. **Straight line.** If the straight line between the ends is plain walking all the way, that
    line is the walk. Plain means no road, water, steep face, enemy town or danger. This idea is
    adapted from Factoruide's route search. We only accept the line when its cost is within 0.2 % of
@@ -504,6 +508,20 @@ node tools/polestar.js nav path 1411 52.0,43.0 1411 45.0,12.0 --dir data/local/n
 
 It prints yards, seconds by kind of ground, falls and the simplified points. Add `--json` for
 everything.
+
+Four `forge-nav` examples look at the grid itself (`cargo build --profile quick -p forge-nav
+--examples`, then `rust/target/quick/examples/<name>`):
+
+- `gridab <grid> [<Leffe's Nav folder>] < queries.jsonl`: each query (`{id, map, from, to, profile}`,
+  world ends `[x, y, z|null]`) drawn as the guide bake draws a leg, on our grid and on Leffe's maps:
+  yards of the simplified line, cost and points per side.
+- `gridcol <grid> <map> <wx> <wy> [radius] [zlo zhi]`: every surface of the columns around a point:
+  height, room above, flags, slope, region and its size, and each direction's link.
+- `trailfollow <grid> < walks.jsonl`: follows a recorded walk (positions, no heights) through the
+  grid's links. A break is a place the player walked where the grid has no way from one column to
+  the next; it also gives each position the height it was followed at.
+- `snapcheck <grid> walks.jsonl follow.jsonl`: how often a place without a height is put on another
+  floor than the recorded walk was on.
 
 ## Rebuilding the grid
 

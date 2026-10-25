@@ -43,12 +43,12 @@ pub const GRID_PRODUCT: &str = "wow_classic_beta";
 pub const DATA_VERSION: &str = "data-2";
 pub const GRID_VERSION: &str = "grid-1";
 pub const PREPARE_VERSION: &str = "prepare-2";
-pub const WORLD_VERSION: &str = "world-1";
-pub const WALKS_VERSION: &str = "walks-1";
+pub const WORLD_VERSION: &str = "world-2";
+pub const WALKS_VERSION: &str = "walks-2";
 pub const ROUTES_VERSION: &str = "routes-8";
 pub const GUIDES_VERSION: &str = "guides-2";
 pub const REPORT_VERSION: &str = "report-2";
-pub const LEGS_VERSION: &str = "legs-2";
+pub const LEGS_VERSION: &str = "legs-4";
 /// The decode cache of Leffe's maps (MB): bounded memory per our measurements.
 pub const LEFFE_CACHE_MB: usize = 2048;
 

@@ -145,14 +145,16 @@ pub enum Move {
 	Lift,
 }
 
-/// A drawn segment: points[from] -> points[to], its move and the floor of its start surface (0 base, i the
-/// cell's ith floor from the bottom).
+/// A drawn segment: points[from] -> points[to], its move, the floor of its start surface (0 base, i the cell's ith
+/// floor from the bottom, on his maps) and its start's ground class (Costs.lua: 0 normal, 1 road, 2 gentle slope,
+/// 3 steep slope, 4 indoor, 5 indoor city).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Leg {
 	pub from: usize,
 	pub to: usize,
 	pub kind: Move,
 	pub floor: Option<u32>,
+	pub ground: u8,
 }
 
 #[derive(Clone, Debug, PartialEq)]
