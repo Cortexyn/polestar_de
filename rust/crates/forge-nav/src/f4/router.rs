@@ -2631,7 +2631,8 @@ impl<'a> Run<'a> {
 				}
 			};
 			let floor = self.floor_of(p.k[pa], p.n[pa])?;
-			legs.push(Leg { from: i - 1, to: i, kind, floor });
+			let ground = (self.class_of(p.k[pa], p.n[pa])? & 7) as u8;
+			legs.push(Leg { from: i - 1, to: i, kind, floor, ground });
 		}
 		Ok(Route { ok: true, reason: None, points: xyz, cost: 0.0, label_yards: 0.0, yards: drawn, wet: wet_yards, jumps: 0.0, hubs, events: Vec::new(), legs })
 	}
