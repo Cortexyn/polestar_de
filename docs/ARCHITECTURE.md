@@ -3128,26 +3128,21 @@ Polestar_Nav.toc        LoadOnDemand, Dependencies: Polestar
 ```
 
 **Memory.** The packed maps (format 2, all three) are 33.9 MB of files; loaded,
-the Lua heap holds about 34 MB (0.2.4's format 1 maps 28 MB; his own three maps were about 12 MB). A search decodes the clusters (ADT tiles) it
-crosses: by the engine's own accounting (`PathGrid.lua` gridSize, an upper
-bound) about 3.3 MB a cluster on average: 15.8 MB for Kharanos to
-Thelsamar (6 clusters), 28.5 MB for Razor Hill to the Valley of Strength
-through Orgrimmar (4), 46.4 MB and 4.9 MB of graph for a 7,700 yd walk from
-the Crossroads to Tanaris (17 clusters, none evicted); the decoded graph of a
-whole continent is 4.2 MB (Eastern Kingdoms) or 4.9 MB (Kalimdor). His
-ceilings, 24 MB of grids and 4 MB of graph, were sized for his 8 yd cells, so
-`API.lua` sets `Path.cacheKB` 48 MB and `Path.graphKB` 16 MB while a search
-runs (maps format 2's longest corpus walk decodes 40.9 MB of grids and 15.7 MB
-of graph) and `Path.graphRestKB` 6 MB at rest. With no search queued (`Idle`)
-the decoded grids go and the decoded graph is trimmed to 6 MB: measured
-standalone (Task 15, LuaJIT heap at the router's callbacks), 33.8 MB with the
-maps loaded and no search, 38.3 MB after the six longest corpus walks and
-`Idle` (0.2.4: 27.8 MB and 33.4 MB), and a peak of 79.2 MB seen during those
-walks. Since the walking floor (#234) the cluster `Path.SurfacesAt`
-reads (the player's) stays decoded at rest while the arrow runs: one cluster,
-3.3 MB on average by the engine's accounting (3.1 MB allocated decoding the
-Den's camp's under LuaJIT); none without a target or 2 s after the arrow's
-last update.
+the Lua heap holds about 34 MB (0.2.4's format 1 maps 28 MB; his own three maps were about 12 MB). On Leffe's
+maps (maps format 5) Polestar_Nav holds 1.4 MB and a continent's part 17 / 21 MB (Eastern Kingdoms / Kalimdor);
+only the player's continent's part loads (below). A search decodes the clusters (ADT tiles) it crosses into a
+few byte strings each (`PathGrid.lua` decodeGrid: kind = walkable value and class, moves, heights, each cell's
+floors, step masks and one list of the other moves and arcs, read with `string.byte`; nothing per node in a
+table): 0.2-0.45 MB a cluster on Leffe's maps, where four tables a node field took 2-10 MB. The decoder's
+scratch arrays are reused until `Idle`; an endpoint tree a connection gives up goes to a pool for the next one,
+and at most 4 trees and 65,536 nodes between them stay (`Path.lua` connect); a decoded graph keeps only its
+entrance lists and graph strings (`metadata` reads an entrance's cell, layer and component from the string).
+`API.lua` sets `Path.cacheKB` 8 MB of grids and `Path.graphKB` 16 MB of graph while a search runs, and
+`Path.graphRestKB` 1 MB at rest. Measured by `nav-memory.rs` (Lua 5.1, the walks and the 16-place batch there,
+2026-10-25), Eastern Kingdoms / Kalimdor: 18.3 / 22.4 MB loaded, 39.8 / 29.2 MB at most while searching, 91.4 /
+7.9 MB allocated in all, 19.8 / 22.5 MB at rest (the grid's maps, both continents: 35.3, 84.5, 163.6 and 40.7).
+Since the walking floor (#234) the cluster `Path.SurfacesAt` reads (the player's) stays decoded at rest while
+the arrow runs: one cluster; none without a target or 2 s after the arrow's last update.
 
 **A map is used whole.** `API.lua` drops a map whose packed tables hold
 fewer entries than its `counts` (a part file missing from the folder, or one
