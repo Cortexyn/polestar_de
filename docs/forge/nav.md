@@ -509,6 +509,20 @@ node tools/polestar.js nav path 1411 52.0,43.0 1411 45.0,12.0 --dir data/local/n
 It prints yards, seconds by kind of ground, falls and the simplified points. Add `--json` for
 everything.
 
+Four `forge-nav` examples look at the grid itself (`cargo build --profile quick -p forge-nav
+--examples`, then `rust/target/quick/examples/<name>`):
+
+- `gridab <grid> [<Leffe's Nav folder>] < queries.jsonl`: each query (`{id, map, from, to, profile}`,
+  world ends `[x, y, z|null]`) drawn as the guide bake draws a leg, on our grid and on Leffe's maps:
+  yards of the simplified line, cost and points per side.
+- `gridcol <grid> <map> <wx> <wy> [radius] [zlo zhi]`: every surface of the columns around a point:
+  height, room above, flags, slope, region and its size, and each direction's link.
+- `trailfollow <grid> < walks.jsonl`: follows a recorded walk (positions, no heights) through the
+  grid's links. A break is a place the player walked where the grid has no way from one column to
+  the next; it also gives each position the height it was followed at.
+- `snapcheck <grid> walks.jsonl follow.jsonl`: how often a place without a height is put on another
+  floor than the recorded walk was on.
+
 ## Rebuilding the grid
 
 You need the grid once per client build. `forge build` builds it itself from the installed game
