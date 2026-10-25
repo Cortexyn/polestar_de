@@ -1647,6 +1647,47 @@ fn lifts_at_the_trade_quarters_centre_under_the_entrance_hall_the_walk_to_brill_
 	assert!(rides(&walked), "a few steps on the ring: the floor is found and the walk rides a lift up ({})", walked.join(", "));
 }
 
+// Fitz in the Trade Quarter (2026-10-25, the first build on Leffe's maps, 1458 67.1,49.8, 18 yd from the south lift's
+// bottom): the minimap's trail went the short way to the lift, but the arrow said 175 m and pointed backwards. His
+// floor there (-48) took no area of ours within 3 yd, so the client's subzone ("Trade Quarter") named a ledge at 13 and
+// the walk started up there. Within 6 yd it takes the Trade Quarter's (as the floor at -42 does): the followed floor is
+// the city's, and the arrow aims along it to the lift. (Leffe's surface at -47 there is a pocket no walk leaves, so the
+// search from it finds nothing and is asked once more without the height: from the floor at -42, 67 yd.)
+#[test]
+fn lifts_in_the_trade_quarter_by_the_south_lift_the_subzone_names_the_citys_floor_and_the_arrow_aims_along_it_to_the_lift() {
+	skip_unless_ready!();
+	let out = run(
+		r#"
+		w.setLevel(20)
+		w.faction = "Horde"
+		IsIndoors = function() return 1 end
+		w.setZone("Undercity", "Trade Quarter")
+		local c, sx, sy = C.MapToWorld(1458, 67.1, 49.8, "e")
+		place(1458, sx, sy, 0)
+		N.SetTarget(1420, 61.9, 52.3, "Brill")
+		for _ = 1, 400 do aim() stub.advance(0.05) end
+		local legs, ci = N.GetRoute()
+		local f
+		for _, rec in ipairs(finds) do
+			if dist(rec.from[1], rec.from[2], sx, sy) < 3 and rec.done and rec.points then f = rec end
+		end
+		local a = aim()
+		local lx, ly = 1544.8, 240.6 -- the south lift's bottom landing
+		local toward = a.x and ((a.x - sx) * (lx - sx) + (a.y - sy) * (ly - sy)) / (dist(a.x, a.y, sx, sy) * dist(lx, ly, sx, sy)) or false
+		local top = -math.huge
+		for _, p in ipairs(f and f.points or {}) do if p.z then top = math.max(top, p.z) end end
+		emit({ floor = N.walk.Floor(0, sx, sy) or false, first = legs[ci].kind .. "|" .. legs[ci].label, yards = f and floor(length(f.points)) or false, top = top,
+			shown = a.dist and floor(a.dist) or false, toward = toward, lift = floor(dist(sx, sy, lx, ly)) })"#,
+		true,
+	);
+	assert_eq!(out["first"], "walk|Walk to the lift");
+	assert!(out["floor"] != false && f(&out["floor"]) < -40.0, "the followed floor is the city's ({}), not the ledge at 13", out["floor"]);
+	assert!(f(&out["yards"]) < 100.0, "the short way to the lift's door, round its shaft ({} yd, {} straight)", out["yards"], out["lift"]);
+	assert!(f(&out["top"]) < -30.0, "on the city's floor all the way (highest {})", out["top"]);
+	assert!(f(&out["shown"]) < 80.0, "the arrow shows {} yd (175 m in the first build)", out["shown"]);
+	assert!(f(&out["toward"]) > 0.5, "and aims toward the lift (cosine {})", out["toward"]);
+}
+
 // Fitz in the canals (2026-10-23, after 21b658260): by the auction house (1628, 305, z -62 by the server; Forever's
 // client gives no height) and on round the canal ring, the walk to Tirisfal lost its lift at some spots and pointed
 // at the entrance hall's level. Along the ring the canal (-62) and the walkway over it (-45) lie under every step, so
