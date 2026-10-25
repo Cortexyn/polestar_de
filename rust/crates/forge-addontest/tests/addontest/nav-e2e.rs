@@ -591,14 +591,21 @@ fn d_30_yards_off_the_path_asks_once_after_the_2_s_throttle_keeping_the_old_path
 		place(1429, GOLDSHIRE[1], GOLDSHIRE[2], GOLDSHIRE[3])
 		local f = guide()
 		local a, b = f.points[1], f.points[2]
-		-- 40 yd along the first segment, then 35 yd off it, square to it.
+		-- Up to 40 yd along the first segment (at most half of it), then 35 yd off it, square to it, on the side
+		-- farther from the rest of the path.
 		local L = dist(a.x, a.y, b.x, b.y)
 		local ux, uy = (b.x - a.x) / L, (b.y - a.y) / L
-		local ox, oy = a.x + ux * 40 - uy * 35, a.y + uy * 40 + ux * 35
+		local along = math.min(40, L / 2)
+		local ox, oy = a.x + ux * along - uy * 35, a.y + uy * along + ux * 35
+		local px, py = a.x + ux * along + uy * 35, a.y + uy * along - ux * 35
+		if offPath(f.points, px, py) > offPath(f.points, ox, oy) then
+			ox, oy = px, py
+		end
 		place(1429, ox, oy)
 		r.off = offPath(f.points, ox, oy)
 		local s = aim()
-		r.soon = { finds = #finds, index = indexOf(f, s.x, s.y), since = GetTime() - f.at }
+		local at, gap = alongOf(f, s.x, s.y)
+		r.soon = { finds = #finds, along = at, gap = gap, since = GetTime() - f.at }
 		stub.advance(1)
 		aim()
 		r.stillSoon = #finds
@@ -609,7 +616,8 @@ fn d_30_yards_off_the_path_asks_once_after_the_2_s_throttle_keeping_the_old_path
 		local n = 0
 		while not g.done and n < 100 do stub.advance(0.05); n = n + 1 end
 		s = aim()
-		r.new = { from = dist(g.from[1], g.from[2], ox, oy), index = indexOf(g, s.x, s.y), oldIndex = indexOf(f, s.x, s.y), n = #g.points, gap = GetTime() - f.at }
+		local nat, ngap = alongOf(g, s.x, s.y)
+		r.new = { from = dist(g.from[1], g.from[2], ox, oy), along = nat, gap = ngap, n = #g.points, since = GetTime() - f.at }
 		stub.advance(5)
 		aim()
 		r.settled = #finds
@@ -618,11 +626,11 @@ fn d_30_yards_off_the_path_asks_once_after_the_2_s_throttle_keeping_the_old_path
 	);
 	assert!(f(&out["off"]) > 30.0, "{:.1} yd off the path", f(&out["off"]));
 	assert_eq!(out["soon"]["finds"], 1, "not within 2 s of the last search ({:.2} s)", f(&out["soon"]["since"]));
-	assert!(f(&out["soon"]["index"]) >= 2.0, "the old path is kept meanwhile");
+	assert!(f(&out["soon"]["gap"]) < 0.5, "the old path is kept meanwhile: the arrow aims on it ({})", out["soon"]);
 	assert_eq!(out["stillSoon"], 1);
 	assert_eq!(out["after"], 2, "one new search once 2 s have passed");
 	assert!(f(&out["new"]["from"]) < 0.01, "from where the player stands");
-	assert_eq!(out["new"]["index"], 2, "the arrow aims at the new path's next point");
+	assert!(f(&out["new"]["gap"]) < 0.5 && f(&out["new"]["along"]) > 0.0 && f(&out["new"]["along"]) < 3.0, "the arrow aims along the new path's first stretch ({})", out["new"]);
 	assert_eq!(out["settled"], 2, "on the new path nothing more is asked");
 }
 

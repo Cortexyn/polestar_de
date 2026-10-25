@@ -19,6 +19,7 @@ pub mod encode;
 pub mod fixture;
 pub mod hpa;
 pub mod layers;
+pub mod leffe;
 
 use crate::grid::{flag, Grid, Tile};
 use crate::legs::Nav;
@@ -183,6 +184,9 @@ pub struct PackIn<'a> {
 	pub continents: &'a [u32],
 	/// The command named in the headers, PACK.json and Nav.xml ("forge nav pack").
 	pub generator: &'a str,
+	/// Leffe's navigation maps (format 4: his Nav folder or the folder holding it) and the maps to take from them
+	/// (maps format 5, pack/leffe.rs); the others are ours. None: today's maps, byte for byte.
+	pub leffe: Option<(&'a Path, &'a [u32])>,
 	pub log: &'a (dyn Fn(&str) + Sync),
 }
 
@@ -241,8 +245,10 @@ pub fn pack_nav(i: &PackIn) -> Result<Pack, String> {
 	let s = |k: &str| index[k].as_str().map_or("null".to_string(), str::to_string);
 	let grid_info = json!({ "product": index["product"].as_str(), "build": index["build"].as_str(), "builtAt": index["builtAt"].as_str(), "version": index["version"] });
 	let built: String = s("builtAt").chars().take(10).collect();
-	let source = format!("the navigation grid ({} {}, built {built}) on {date}", s("product"), s("build"));
-	let gen = generated_header(&format!("{} --cells {}", i.generator, i.cells), &source);
+	// Leffe's maps for any map of this pack: the headers name them (and the command its --leffe).
+	let leffe_used = i.leffe.is_some_and(|l| list.iter().any(|c| l.1.contains(c)));
+	let source = format!("the navigation grid ({} {}, built {built}){} on {date}", s("product"), s("build"), if leffe_used { " and Leffe's navigation maps" } else { "" });
+	let gen = generated_header(&format!("{} --cells {}{}", i.generator, i.cells, if leffe_used { " --leffe" } else { "" }), &source);
 	let mut manifest = Map::new();
 	manifest.insert("generator".into(), json!(i.generator));
 	manifest.insert("format".into(), json!(2));
@@ -321,23 +327,44 @@ pub fn pack_nav(i: &PackIn) -> Result<Pack, String> {
 			st.opened,
 			st.hub_cells
 		));
-		let h = hpa::build_hpa(&cg);
-		log(&format!("grid HPA: nodes {}, edges {} (inter {})", h.node_count(), h.edges.len(), h.inter));
-		let maps = encode::encode_maps(&cg, &h)?;
 		let mut m = Map::new();
+		// Leffe's navigation maps for this map (format 5), else ours (format 3).
+		let leffe = i.leffe.filter(|l| l.1.contains(&c)).map(|l| l.0);
+		let (maps, entrances, edges) = match leffe {
+			Some(dir) => {
+				let (maps, used, s) = leffe::leffe_maps(dir, c, &cg)?;
+				log(&format!(
+					"Leffe's maps {c}: {} clusters, floors {}, entrances {}, edges {} ({} past 63 dropped), jumps {}, drops {}, climbs {} -> {} arcs, {} steep steps closed, {} surfaces with an area of ours",
+					s.clusters, s.floors, s.entrances, s.edges, s.dropped, s.jumps, s.drops, s.climbs, s.arcs, s.closed, s.areas
+				));
+				cg.areas = used;
+				m.insert(
+					"leffe".into(),
+					json!({ "floors": s.floors, "jumps": s.jumps, "drops": s.drops, "climbs": s.climbs, "arcs": s.arcs, "droppedEdges": s.dropped, "closedSteps": s.closed, "areaSurfaces": s.areas }),
+				);
+				(maps, s.entrances, s.edges - s.dropped)
+			}
+			None => {
+				let h = hpa::build_hpa(&cg);
+				log(&format!("grid HPA: nodes {}, edges {} (inter {})", h.node_count(), h.edges.len(), h.inter));
+				(encode::encode_maps(&cg, &h)?, h.node_count(), h.edges.len())
+			}
+		};
 		let lifts_c: Vec<Value> = lifts[c.to_string()].as_array().cloned().unwrap_or_default();
 		let chokes = chokepoints::chokepoints(&nav, c, &aids, &lifts_c, &frames, &areas);
 		m.insert("chokepoints".into(), json!(chokes.len()));
 		by_map.push((c, chokes));
 		let (out, packed_bytes) = encode::pack_files(c, &cg, &maps, "PolestarPathData", &gen, &hubs, Some(&area_names))?;
-		if maps.area.is_some() {
-			manifest.insert("format".into(), json!(3));
+		if maps.area.is_some() && manifest.get("format") != Some(&json!(5)) {
+			manifest.insert("format".into(), json!(if maps.arc.is_some() { 5 } else { 3 }));
 		}
 		let raw: usize = maps.fields().iter().map(|f| maps.field(f).values().map(String::len).sum::<usize>()).sum();
 		m.insert("clusters".into(), json!(cg.cluster_count()));
-		m.insert("floors".into(), json!(cg.floor_cell.len()));
-		m.insert("nodes".into(), json!(h.node_count()));
-		m.insert("edges".into(), json!(h.edges.len()));
+		if leffe.is_none() {
+			m.insert("floors".into(), json!(cg.floor_cell.len()));
+		}
+		m.insert("nodes".into(), json!(entrances));
+		m.insert("edges".into(), json!(edges));
 		m.insert("components".into(), json!(maps.components));
 		m.insert("clampedCosts".into(), json!(maps.clamped));
 		m.insert("maxDegree".into(), json!(maps.max_degree));
@@ -345,7 +372,9 @@ pub fn pack_nav(i: &PackIn) -> Result<Pack, String> {
 		m.insert("packedBytes".into(), json!(packed_bytes));
 		m.insert("files".into(), json!(out.len()));
 		m.insert("hubs".into(), json!(hubs.len()));
-		m.insert("classes".into(), class_counts(&cg));
+		if leffe.is_none() {
+			m.insert("classes".into(), class_counts(&cg));
+		}
 		m.insert(
 			"roads".into(),
 			json!({ "strong": rs.strong, "weak": rs.weak, "pieces": rs.pieces, "ends": rs.ends, "bridges": rs.bridges, "bridgedColumns": rs.bridged_columns, "refused": rs.refused }),

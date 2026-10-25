@@ -171,6 +171,8 @@ local function State(map)
 			links = {}, -- [k][node + 1] = { direction + 8 * (layer + 1), ... } steps besides the base grid's
 			cls = {}, -- [k][node + 1] = ground class byte (Routing/Costs.lua); ZERO for a cluster without classes
 			area = {}, -- [k] = the cluster's area field string (maps format 3; nodeArea reads it), kept while it is decoded
+			arcs = {}, -- [k][node + 1] = { to, length in cells, ... }: one-way moves (maps format 5's arc field); false: none
+			rarcs = {}, -- [k][node + 1] = the same arcs backwards { from, length, ... }, for a search out of a goal
 			graphUsed = {},
 			graphSize = {},
 			nodes = {}, -- [k] = entrance ids (k * 4096 + i)
@@ -473,6 +475,34 @@ local function decodeGrid(st, k)
 	return val, m, z, at, links, classes and decodeClasses(classes, #val) or ZERO
 end
 
+-- One-way arcs (maps format 5): n(3) | n x [from(3) to(3) yards * 4(2)] -> forward and backward lists by node + 1,
+-- each { node, length in cells, ... }; false without the field.
+local function decodeArcs(st, s)
+	if not s then
+		return false, false
+	end
+	local fwd, back = {}, {}
+	local n = num(s, 1, 3)
+	local unit = 4 * st.cs
+	for i = 0, n - 1 do
+		local p = 4 + i * 8
+		local a, b, len = num(s, p, 3), num(s, p + 3, 3), num(s, p + 6, 2) / unit
+		local f = fwd[a + 1]
+		if not f then
+			f = {}
+			fwd[a + 1] = f
+		end
+		f[#f + 1], f[#f + 2] = b, len
+		local r = back[b + 1]
+		if not r then
+			r = {}
+			back[b + 1] = r
+		end
+		r[#r + 1], r[#r + 2] = a, len
+	end
+	return fwd, back
+end
+
 -- Lua 5.1 array slots occupy 16 bytes and grow by powers of two. Charge sparse floor/link hashes
 -- conservatively too; this is a memory ceiling across continents, not a cluster count estimate.
 local useClock, decodedKB, decodedCount = 0, 0, 0
@@ -495,7 +525,7 @@ local function evict(st, oldest)
 	decodedKB, decodedCount = decodedKB - st.sizes[oldest], decodedCount - 1
 	st.sizes[oldest], st.used[oldest] = nil, nil
 	st.val[oldest], st.moves[oldest], st.z[oldest], st.at[oldest], st.links[oldest] = nil, nil, nil, nil, nil
-	st.cls[oldest], st.area[oldest] = nil, nil
+	st.cls[oldest], st.area[oldest], st.arcs[oldest], st.rarcs[oldest] = nil, nil, nil, nil
 	st.decoded = st.decoded - 1
 end
 
@@ -534,6 +564,11 @@ local function grid(st, k)
 		trim(st, size)
 		st.val[k], st.moves[k], st.z[k], st.at[k], st.links[k], st.cls[k] = val, m, z, at, links, cls
 		st.area[k] = unpackField(st.D, "area", k + 1) or false
+		local arcs = unpackField(st.D, "arc", k + 1)
+		st.arcs[k], st.rarcs[k] = decodeArcs(st, arcs)
+		if arcs then
+			size = size + #arcs / 8 * 0.2
+		end
 		st.sizes[k], st.decoded, decodedKB = size, st.decoded + 1, decodedKB + size
 		decodedCount = decodedCount + 1
 		if st.D.packed then
@@ -543,6 +578,9 @@ local function grid(st, k)
 			end
 			if st.D.area then
 				st.D.area[k + 1] = nil
+			end
+			if st.D.arc then
+				st.D.arc[k + 1] = nil
 			end
 		end
 	end

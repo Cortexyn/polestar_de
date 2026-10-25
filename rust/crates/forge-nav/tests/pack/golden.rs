@@ -22,6 +22,7 @@ fn pack_golden(cells: usize, out: &Path, generator: &str) {
 		date: "2026-10-23",
 		continents: &[0],
 		generator,
+		leffe: None,
 		log: &log,
 	})
 	.unwrap();
@@ -84,6 +85,7 @@ fn real_grid_matches_the_js() {
 		date: &date,
 		continents: &forge_nav::pack::MAPS,
 		generator: JS,
+		leffe: None,
 		log: &log,
 	})
 	.unwrap();

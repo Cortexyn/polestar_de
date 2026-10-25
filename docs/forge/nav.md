@@ -280,7 +280,8 @@ Forge uses them: the build log, the walks stats (`nav: { backend, pack }`) and t
 sources. Licences and every other credit are in [rust/NOTICE.md](../../rust/NOTICE.md) and the
 data pack's `manifest.json`.
 
-Forge reads them at build time only. The in-game arrow is not affected. The reader (`forge_nav::f4`)
+Forge reads them at build time, and `forge nav pack --leffe` condenses them into the in-game walking maps (below,
+"The walking maps"); the files themselves never ship. The reader (`forge_nav::f4`)
 is a bit-for-bit port of his own reader: same search order, same ties, same arithmetic. It walks
 his maps with his costs. Danger uses the same rule as ours, priced inside his search, with the
 ends' zones exempt (`f4walks.rs`).
@@ -581,16 +582,26 @@ pack's stores no longer match it.
 
 ## The walking maps (forge nav pack, forge nav check)
 
-The arrow's walking routes in game run on Polestar's own walking maps in `addon/Polestar_Nav`
-(maps format 2: per walkable surface a ground class, road, gentle or steep slope, indoor, indoor
+The arrow's walking routes in game run on the walking maps in `addon/Polestar_Nav`. Shipped: maps
+format 5, Leffe's navigation maps condensed for the game. Without `--leffe`: Polestar's own from our
+grid (maps format 2: per walkable surface a ground class, road, gentle or steep slope, indoor, indoor
 city and the Alliance and Horde hubs; every graph edge priced per faction; format 3 adds each
 surface's WMO group area). `forge nav pack` writes them from the grid and the ground layers:
 
 ```sh
-forge nav pack --dir data/local/nav4 --date 2026-10-23
+forge nav pack --dir <grid> --date 2026-10-25 --leffe <Leffe's maps>    # what ships
+forge nav pack --dir <grid> --date 2026-10-23                           # our grid's maps
 forge nav check
 ```
 
+- `--leffe <dir>` (his format-4 Nav folder, or the folder holding it: the same client build and
+  cells as the grid) takes the maps from his: his surfaces, floors, classes, zones and entrance graph,
+  his jumps and drops as each cluster's one-way `arc` field, and each of his surfaces the named area of
+  the grid's surface in the same cell nearest in height (maps format 5, PACK.json format 5; each map's
+  `leffe` entry counts what came over). The chokepoints stay the grid's. `--leffe-maps 0,1,2991` names
+  the maps taken from his (default all three); the others are the grid's, byte for byte, so one
+  continent can go back to our grid if his maps walk it wrong. About 90 s for the three maps.
+  The rules are in [ARCHITECTURE.md](../ARCHITECTURE.md), "Leffe's navigation maps in game".
 - `--dir` is the grid (format 4: it needs each surface's slope), `--layers` the ground layers
   (default `data/local/nav-layers`, below), `--out` the addon folder (default `addon/Polestar_Nav`),
   `--cells` the cells per ADT tile (default 128, 4.17 yd), `--date` the date in the generated headers

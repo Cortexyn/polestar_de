@@ -200,17 +200,20 @@ end
 -- Grid search inside one cluster, entering water costing swim times its length and, with mult (weights), a node of
 -- class c mult[c] times it, and a node in a zone of mult.danger that zone's multiplier times. tree holds g/parent
 -- keyed by node + 1 and, with mult, y: the yards walked along the cost-best path. With goal set it is A*, otherwise
--- Dijkstra that stops once every node in targets (a set of nodes) is settled.
+-- Dijkstra that stops once every node in targets (a set of nodes) is settled. On a map with arcs (format 5's one-way
+-- jumps and drops) a search steps along them; back (a search out of a goal, its tree walked to the goal) along them
+-- backwards.
 local function Tree()
 	return { g = {}, par = {}, stamp = {}, closed = {}, gen = 0, y = {} }
 end
 -- One grid search loop; splitting moves its retained arrays to upvalues on the hot path
-local function search(st, k, swim, mult, source, tree, goal, targets, left)
+local function search(st, k, swim, mult, source, tree, goal, targets, left, back)
 	local val = grid(st, k)
 	-- Search only enters populated grids, through snapped endpoints or decoded entrances.
 	---@cast val number[]
 	-- A paused search retains these arrays even if another job evicts its cluster.
 	local m, z, at, links, cls = st.moves[k], st.z[k], st.at[k], st.links[k], mult and st.cls[k]
+	local arcs = (back and st.rarcs or st.arcs)[k]
 	local C, cs = st.C, st.cs
 	local hs = cs * (mult and mult.min or 1) -- the cheapest yard: the heuristic never overstates
 	local N = C * C
@@ -328,6 +331,12 @@ local function search(st, k, swim, mult, source, tree, goal, targets, left)
 					end
 				end
 			end
+			local a = arcs and arcs[i]
+			if a then
+				for e = 1, #a, 2 do
+					relax(a[e], a[e + 1])
+				end
+			end
 		end
 	end
 	-- The heap ran dry: every node reachable from source is settled (an endpoint tree that never met all its targets).
@@ -360,7 +369,7 @@ local trees = { S = Tree(), G = Tree(), R = Tree() }
 local ag, ay, apar, astamp, aclosed, agen = {}, {}, {}, {}, {}, 0
 
 -- Endpoint searches: grid Dijkstra to the cluster's entrances.
-local function endpoint(st, swim, mult, tree, k, node)
+local function endpoint(st, swim, mult, tree, k, node, back)
 	local targets, left = {}, 0
 	for _, id in ipairs(nodesOf(st, k)) do
 		local e = entrance(st, id)
@@ -368,13 +377,13 @@ local function endpoint(st, swim, mult, tree, k, node)
 			targets[e], left = true, left + 1
 		end
 	end
-	search(st, k, swim, mult, node, tree, nil, targets, left)
+	search(st, k, swim, mult, node, tree, nil, targets, left, back)
 end
 -- An endpoint on a rooftop or ledge the grid cannot leave moves to the nearest node that reaches an entrance,
 -- down a ledge but never up one or onto another level.
-local function settle(st, swim, mult, tree, k, node)
+local function settle(st, swim, mult, tree, k, node, back)
 	local C = st.C
-	endpoint(st, swim, mult, tree, k, node)
+	endpoint(st, swim, mult, tree, k, node, back)
 	local function connected()
 		for _, id in ipairs(nodesOf(st, k)) do
 			local e = entrance(st, id)
@@ -405,7 +414,7 @@ local function settle(st, swim, mult, tree, k, node)
 					local rise = near and st.z[k][near + 1] - h
 					if near and rise <= ZTOL and rise >= -DROP and not reached(tree, near) then
 						tries, node = tries + 1, near
-						endpoint(st, swim, mult, tree, k, node)
+						endpoint(st, swim, mult, tree, k, node, back)
 						if connected() then
 							return node
 						end
@@ -443,13 +452,13 @@ end
 -- Fixed places recur in both batches and in later journeys. Keep their small entrance-cost vectors and only the
 -- last eight grid trees; cap the cache so moving start positions cannot grow it for the entire play session. A
 -- connection is priced for one profile and style on a map with classes (mult.tag), for every one on a map without.
-local function connect(st, swim, mult, k, node)
+local function connect(st, swim, mult, k, node, back)
 	nodesOf(st, k)
-	local key = k .. ":" .. node .. ":" .. swim .. ":" .. (mult and mult.tag or "")
+	local key = k .. ":" .. node .. ":" .. swim .. ":" .. (mult and mult.tag or "") .. (back and ":b" or "")
 	local entry = st.ends[key]
 	if not entry then
 		local tree = Tree()
-		node = settle(st, swim, mult, tree, k, node)
+		node = settle(st, swim, mult, tree, k, node, back)
 		local edges, yards = connections(st, tree, k)
 		entry = { node = node, edges = edges, yards = yards, tree = tree }
 		-- A handful of local trees removes repeated endpoint searches without retaining a continent's grids.
@@ -474,7 +483,7 @@ end
 -- while the player's own is unknown indoors) keeps to the surfaces within ZTOL of one of them, all of them when none
 -- is: the Undercity's canals and streets, never its roofs or the Ruins above. Returns each surface's connection, the
 -- entrance costs merged by minimum, per entrance the surface it came from, and the merged costs' yards.
-local function connectPoint(st, swim, mult, k, node, h, floors)
+local function connectPoint(st, swim, mult, k, node, h, floors, back)
 	local nodes = { node }
 	if not h then
 		local values = grid(st, k)
@@ -536,7 +545,7 @@ local function connectPoint(st, swim, mult, k, node, h, floors)
 	end
 	local ends, merged, via, yards = {}, {}, {}, {}
 	for _, start in ipairs(nodes) do
-		local n, edges, tree, edgeYards = connect(st, swim, mult, k, start)
+		local n, edges, tree, edgeYards = connect(st, swim, mult, k, start, back)
 		ends[#ends + 1] = { node = n, tree = tree }
 		for id, cost in pairs(edges) do
 			if not merged[id] or cost < merged[id] then
@@ -741,7 +750,7 @@ local function run(map, from, to, waterWalking, costOnly, profile, job, style, d
 
 	local S, G = trees.S, trees.G
 	local starts, source, sourceVia, sourceYards = connectPoint(st, swim, mult, sk, sc, from.z, from.floors)
-	local goals, target, targetVia, targetYards = connectPoint(st, swim, mult, gk, gc, to.z, to.floors)
+	local goals, target, targetVia, targetYards = connectPoint(st, swim, mult, gk, gc, to.z, to.floors, true)
 	local key = table.concat({ sk, sc, gk, gc, swim, from.z and 1 or 0, to.z and 1 or 0, mult and mult.tag or "",
 		type(from.floors) == "table" and table.concat(from.floors, ",") or "", type(to.floors) == "table" and table.concat(to.floors, ",") or "" }, ":")
 	st.paths = st.paths or {}
@@ -998,7 +1007,7 @@ local function run(map, from, to, waterWalking, costOnly, profile, job, style, d
 			local goal = targetVia[a]
 			local tree = goal.tree
 			if not tree or not reached(tree, entrance(st, a)) then
-				search(st, gk, swim, mult, goal.node, G, entrance(st, a))
+				search(st, gk, swim, mult, goal.node, G, entrance(st, a), nil, nil, true)
 				tree = G
 			end
 			local nodes = trace(tree, entrance(st, a), {})
@@ -1237,7 +1246,7 @@ local function runMany(map, from, targets, waterWalking, reverse, job, profile, 
 	local ci, yi = edgeFields(st, waterWalking, profile)
 	local mult = weights(st, profile, style, danger)
 	local edged = edgeDanger(st, mult)
-	local starts, source, _, sourceYards = connectPoint(st, swim, mult, sk, sc, from.z, from.floors)
+	local starts, source, _, sourceYards = connectPoint(st, swim, mult, sk, sc, from.z, from.floors, reverse)
 	local clusters, links, dist, dyards, closed, left = {}, {}, {}, {}, {}, #targets
 	local lifts = liftsOf(st, map)
 	-- Per prepared cluster with a landing: its targets, and per target the nodes it stands on (for a walk off a lift).
@@ -1277,7 +1286,7 @@ local function runMany(map, from, targets, waterWalking, reverse, job, profile, 
 			local _, node = pointNode(st, targets[i])
 			if node then
 				local goals, _
-				goals, ends[i], _, endYards[i] = connectPoint(st, swim, mult, k, node, targets[i].z, targets[i].floors)
+				goals, ends[i], _, endYards[i] = connectPoint(st, swim, mult, k, node, targets[i].z, targets[i].floors, not reverse)
 				if landed[k] then
 					local nodes = {}
 					for g, b in ipairs(goals) do

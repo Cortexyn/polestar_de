@@ -30,7 +30,7 @@ one into the other. The addons:
 | `Polestar_<locale>` (`addon/Polestar_deDE/` … `zhTW/`) | The language folder of one client language: our guides' texts (`Texts.lua`, for `Polestar.GuideTexts`) and the quest, NPC, object and item names (`Names.lua`, for `Polestar.Names`); loaded on demand, only the client's own, never in English. It replaced `Polestar_Guides_<locale>` and `Polestar_Names_<locale>` in 0.3.0 | `forge guide compile` (`Texts.lua`) and `forge data names` (`Names.lua`, from the client's tables, DingDB (pinned) and pfQuest); each writes the one TOC alike (`forge_guide::toc::language_toc`) and leaves the other's file alone | yes (generated) | yes |
 | `Polestar_QuestDB` (`addon/Polestar_QuestDB/`) | The quest database behind quest markers and tooltips; loaded on demand | `forge data questdb` | no (local, gitignored) | yes, when built |
 | `Polestar_Codex` (`addon/Polestar_Codex/`) | Lookup's Codex, and the Dungeons and Rares data; loaded on demand | `forge data codex`, from release-safe inputs (`--local-extras` builds a local-only one) | no (generated, gitignored) | yes, always: `pack` fails without it |
-| `Polestar_Nav` (`addon/Polestar_Nav/`) | Polestar's walking router (started from Shortest Path Forever v1.16.0 by Cillian Berragan, GPL-3.0-or-later; Polestar's since 2026-10-16) with Polestar's walking maps of Eastern Kingdoms, Kalimdor and Zephras Isle (maps format 2, grown from his format) and the walk's chokepoints, for the arrow's walking routes; loaded on demand at login, never while an installed Shortest Path Forever guides (the target handed to it, or a journey of its own running; Nav, "In-game walking routes (Polestar_Nav)", "Hand-off to Shortest Path Forever") | the router hand-written (`Routing/`); `forge nav pack` (the maps, `PACK.json`, from the navigation grid and the ground layers) | yes | yes, always |
+| `Polestar_Nav` (`addon/Polestar_Nav/`) | Polestar's walking router (started from Shortest Path Forever v1.16.0 by Cillian Berragan, GPL-3.0-or-later; Polestar's since 2026-10-16) with the walking maps of Eastern Kingdoms, Kalimdor and Zephras Isle (maps format 5: Leffe's navigation maps, his surfaces, graph, jumps and drops, with our area names and chokepoints; format 3 from our grid when packed without `--leffe`) and the walk's chokepoints, for the arrow's walking routes; loaded on demand at login, never while an installed Shortest Path Forever guides (the target handed to it, or a journey of its own running; Nav, "In-game walking routes (Polestar_Nav)", "Hand-off to Shortest Path Forever") | the router hand-written (`Routing/`); `forge nav pack --leffe` (the maps, `PACK.json`, from Leffe's navigation maps, the navigation grid and the ground layers) | yes | yes, always |
 | `Polestar_Travel` (`addon/Polestar_Travel/`) | Zone crossings for the travel planner, from an optional local crossings file; loaded with Polestar | `travel build` | no (local, gitignored) | no, never packaged (Nav, "Travel planner and zone crossings") |
 | `Polestar_Recorder` (`addon/Polestar_Recorder/`) | The optional standalone recorder of play sessions, for authoring | hand-written | yes | yes, as its own zip |
 
@@ -5628,6 +5628,19 @@ fileDataID from wago.tools into `data/sources/casc` (local, never shipped):
   (`PolestarNavChokepoints[map]`: lift landings, bridges, gates at passages,
   tunnels, cave and building mouths, passes, each named by its AreaTable
   area) for the journey's named walk steps.
+- **Leffe's navigation maps in game** (`forge nav pack --leffe <dir>`, `pack/leffe.rs`, maps format 5): the
+  walking maps taken from Leffe's navigation maps (format 4, private, never shipped as files) instead of our grid.
+  His grid, height, floor and class fields already are the in-game encodings and pass through (the steps his flags
+  leave open past the walkable slope, which his reader closes, are closed); his zones too. His entrance graph is
+  re-encoded as the graph field (an entrance on one of his refined ports becomes the surface owning it; an entrance
+  keeps its 63 cheapest edges; an edge may be one way: an entrance lists only the edges it can walk). His motion
+  stream reduces, at 4.17 yd cells, to steps inside one surface, steps his cells make, and his jumps, drops and
+  climbs, each to the same or a neighbouring cell: those inside a cluster are the new `arc` field (one-way moves
+  between the surfaces owning their ends, once per pair), those across a border are already his graph's. Each of his
+  surfaces takes the named WMOAreaTable row of our grid's surface in its cell nearest in height (within 3 yd), so the
+  Undercity's floor names carry over; the chokepoints stay ours. The router steps along an arc like a grid step of its
+  length, and a search out of a goal steps along them backwards (`Routing/Path.lua` search, `PathGrid.lua`
+  decodeArcs). `--leffe-maps` picks the maps taken from his; the rest stay the grid's, byte for byte.
 
 ## Tests
 
