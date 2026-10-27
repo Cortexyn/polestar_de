@@ -469,6 +469,7 @@ local function buildRecorder(view)
 		view.Refresh()
 	end)
 	local status = W.ActionTile(view, "info", L["Print status"], L["Counts and the current session in chat."], function() recorderCommand("status") end)
+	local window = W.ActionTile(view, "record", L["Recorder window"], L["Position trails, marks and the list of spots to walk, in a small window."], function() recorderCommand("ui") end)
 	local note = W.Text(view, "note", "textDim")
 	note:SetWordWrap(true)
 	note:SetSpacing(3)
@@ -483,7 +484,7 @@ local function buildRecorder(view)
 		y = y + 44
 		if not st.installed then
 			for _, r in pairs(rows) do r:Hide() end
-			actions:Hide(); toggle:Hide(); status:Hide()
+			actions:Hide(); toggle:Hide(); status:Hide(); window:Hide()
 			note:SetText(L["The Polestar Recorder addon is not loaded. Enable it in the AddOns list on the character screen to record your play for guide authoring."])
 			note:SetWidth(win.BodyWidth)
 			note:ClearAllPoints()
@@ -508,7 +509,8 @@ local function buildRecorder(view)
 		toggle.Title:SetText(st.enabled and L["Stop recording"] or L["Start recording"])
 		toggle.psTitle = toggle.Title:GetText()
 		toggle.Desc:SetText(st.enabled and L["Nothing more is written until you start it again."] or L["Write quests, routes and world data for guide authors. Off until you start it."])
-		return y + placePair(view, { toggle, status }, y, cw, W.LayoutTile) + 24
+		y = y + placePair(view, { toggle, status }, y, cw, W.LayoutTile) + 8
+		return y + placePair(view, { window }, y, cw, W.LayoutTile) + 24
 	end
 end
 
@@ -666,6 +668,8 @@ end
 
 add({ page = L["Community guides"], key = "guidepacks", icon = "layers", order = 70, subtitle = L["Guides made by other players: switch them on or off, and choose where suggestions come from."],
 	custom = UI.Packs.Build, dot = UI.Packs.HasProblems }, true)
+add({ page = L["Guiding Stars"], key = "thanks", icon = "star", order = 80, subtitle = L["Celebrating the supporters and contributors behind Polestar."],
+	custom = UI.Thanks.Build }, true)
 add({ page = REC, key = "recorder", icon = "record", order = 90, subtitle = L["The data recorder for guide authors."], custom = buildRecorder }, true)
 add({ page = ABOUT, key = "about", icon = "info", order = 100, subtitle = L["Why Polestar exists, its commands and its credits."], custom = buildAbout }, true)
 
@@ -1099,6 +1103,7 @@ local function build()
 	})
 	O.frame = win
 	UI.Report.SidebarLink(win)
+	UI.Thanks.HeaderLink(win)
 	-- A gamepad moves through the page (UI/Gamepad.lua); LB / RB step the tabs.
 	if ns.Gamepad and ns.Gamepad.Register then
 		ns.Gamepad.Register(win, {

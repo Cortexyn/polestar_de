@@ -7,7 +7,7 @@
 // rule (tests/lint-timed.test.js); the Fargodeep Mine and Blackfathom Deeps
 // mouths are in tests/guides-caves.test.js.
 //
-// Needs data/forever (node tools/polestar.js data build); skips without it.
+// Needs data/forever (forge data build); skips without it.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,14 +16,31 @@ const path = require('node:path');
 const { needs } = require('./helpers/data');
 const { compileSources, OFFICIAL_DIR } = require('../tools/lib/dsl/project');
 const { loadData } = require('../tools/lib/dsl/data');
+const { loadCorrections } = require('../tools/lib/data/corrections');
 const { DATA, SOURCES } = require('../tools/lib/paths');
-const { loadWowhead } = require('../tools/lib/codex/wowhead');
+const { loadWeb } = require('../tools/lib/codex/web');
 const { runAddon } = require('./helpers/lua');
 const { writeTestPack } = require('./helpers/dsl');
 const { buildSimPack, playGuide, SIMULATE } = require('../tools/lib/playtest');
-const { makeProjector } = require('../tools/lib/route/geo');
+const { makeProjector, dist } = require('../tools/lib/route/geo');
 
 const skip = needs('quests.json', 'npcs.json', 'objects.json', 'map-frames.json');
+
+test('Horde objective follow-ups: camp discovery, Silithyst delivery and cooking point at their actual objective', { skip }, () => {
+	for (const [file, quest, map, npc] of [
+		['forever/horde/50-60/04-azshara.guide', 3505, 1447, null],
+		['forever/horde/50-60/06-silithus.guide', 9422, 1451, 18199],
+		['forever/horde/tauren/01-mulgore.guide', 96661, 1412, 3067],
+	]) {
+		const { goal } = goals(file).find(({ goal }) => goal.t === 'complete' && goal.quest === quest);
+		assert.equal(goal.map, map, `${quest}: the unfinished objective has an arrow on its map`);
+		const event = npc ? null : data.quests[quest].objectives.find((o) => o.type === 'event');
+		const spawn = npc ? data.npcs[npc].spawns[map] : null;
+		assert.equal(goal.f || 'l', spawn ? spawn.f : event.f, `${quest}: keep the source coordinate frame`);
+		assert.equal(goal.x, spawn ? spawn.pts[0][0] : event.x);
+		assert.equal(goal.y, spawn ? spawn.pts[0][1] : event.y);
+	}
+});
 
 test('Horde Call of Fire: hand in the carried trainer lead at Kranal before starting the shared ritual', { skip }, () => {
 	for (const file of ['forever/horde/02-the-barrens.guide', 'forever/horde/orc-troll/02-the-barrens.guide']) {
@@ -185,6 +202,20 @@ test(`${TIRISFAL}: Onrevax's report: each Patience report goal names the NPC who
 	}
 });
 
+// Gordo walks the road between his spawn (43.1,54.7) and the edge of Brill
+// (CMaNGOS classic-db's waypoints for him), and you come to him for his report
+// from the fields west of Brill.
+test(`${TIRISFAL}: yiliev0's report (#674): Gordo's report is searched for along his road, from Brill's side out to his spawn`, { skip }, () => {
+	const list = goals(TIRISFAL);
+	const { goal } = list[at(list, 'collect 286202 (Gordo)', (g) => g.t === 'collect' && g.item === 286202)];
+	const spots = (goal.spots || []).filter((s) => !s.alt);
+	assert.ok(spots.length >= 3, `the arrow searches several points of his road: ${JSON.stringify(goal.spots)}`);
+	const spawn = { map: 1420, x: 43.06, y: 54.69 };
+	const at_ = (s) => ({ map: goal.map, x: s.x, y: s.y });
+	assert.ok(yards(at_(spots[0]), spawn) >= 300, `the search starts at Brill's end of his road, not at his spawn: ${JSON.stringify(spots[0])}`);
+	assert.ok(yards(at_(spots[spots.length - 1]), spawn) <= 30, 'and ends at his spawn');
+});
+
 test(`${STONETALON}: the Warsong update goals name the scouts who hand them over, from the data`, { skip }, () => {
 	const list = goals(STONETALON);
 	for (const [item, npc, name] of [[16764, 12862, 'Warsong Scout'], [16763, 12863, 'Warsong Runner'], [16765, 12864, 'Warsong Outrider']]) {
@@ -212,7 +243,7 @@ const CAVES = [
 	// Thazz'ril's Pick and Yarrog Baneshadow: "Go in the cave (45 56)".
 	{ cave: 'the Burning Blade Coven (the pick)', guide: DUROTAR, target: (g) => g.t === 'collect' && g.item === 16332, mouth: { map: 1411, x: 45, y: 56 } },
 	{ cave: 'Skull Rock', guide: DUROTAR, target: (g) => g.t === 'collect' && g.item === 4871, mouth: { map: 1411, x: 55, y: 10 } },
-	// The troll cave's mouth as marked in game (thmastin, PR #16); Wowhead's comments put it at 26,79.
+	// The troll cave's mouth as marked in game (thmastin, PR #16); players' reports put it near 26,79.
 	{ cave: 'the Coldridge troll cave', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 2004, mouth: { map: 1426, x: 26.93, y: 80.03 } },
 	// The Grizzled Den's mouth as marked in game (thmastin); Flintfire's shipments lie inside.
 	{ cave: 'the Grizzled Den', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 280413, mouth: { map: 1426, x: 42.57, y: 54.68 } },
@@ -220,7 +251,8 @@ const CAVES = [
 	{ cave: 'the Grizzled Den (Frosthowl)', guide: DUN_MOROGH, target: (g) => g.t === 'collect' && g.item === 280426, mouth: { map: 1426, x: 42.57, y: 54.68 } },
 	// Frostmane Hold's mouth as marked in game (thmastin); its Headhunters guard the way in.
 	{ cave: 'Frostmane Hold', guide: DUN_MOROGH, target: (g) => g.t === 'kill' && g.quest === 287, mouth: { map: 1426, x: 25.1, y: 50.94 } },
-	{ cave: 'the Jasperlode Mine', guide: ELWYNN, target: (g) => g.t === 'complete' && g.quest === 76, mouth: { map: 1429, x: 61.6, y: 54.1 } },
+	// The Mining Tools lie along the tunnel from the entrance: the first goal inside (#612).
+	{ cave: 'the Jasperlode Mine', guide: ELWYNN, target: (g) => g.t === 'collect' && g.item === 247816, mouth: { map: 1429, x: 61.6, y: 54.1 } },
 	// Pynte (#328): both mouths where the walk in reaches the cave's floor on the navigation grid, not a Classic comment's point beside it.
 	{ cave: 'Shadowthread Cave', guide: TELDRASSIL, target: (g) => g.t === 'collect' && g.item === 5167, mouth: { map: 1438, x: 56.69, y: 31.29 } },
 	{ cave: 'Fel Rock', guide: TELDRASSIL, target: (g) => g.t === 'collect' && g.item === 5221, mouth: { map: 1438, x: 54.59, y: 52.12 } },
@@ -268,6 +300,19 @@ test(`${TELDRASSIL}: Dolanaar Delivery is taken from Porthannius after the Shado
 	assert.ok(yards(porthannius, keldamyr) < yards(tenaron, keldamyr), 'Porthannius is on the way down to Dolanaar');
 	const next = list.slice(take + 1).filter(located).find(everyone);
 	assert.ok(yards(next.goal, keldamyr) < yards(next.goal, tenaron), `the next stop (${next.goal.t} ${next.goal.quest}) is in Dolanaar`);
+});
+
+test(`${TELDRASSIL}: Pynte's report (#647): Teldrassil is taken from the Oracle Tree Bark on The Oracle Tree's turn-in and handed to Fandral with Crown of the Earth`, { skip }, () => {
+	const list = goals(TELDRASSIL);
+	const bark = at(list, 'turnin 98398 (The Oracle Tree)', is('turnin', 98398));
+	const take = at(list, 'accept 940 (Teldrassil)', is('accept', 940));
+	assert.equal(take, bark + 1, 'taken straight after The Oracle Tree is handed in');
+	assert.ok(everyone(list[take]), 'for every class');
+	assert.ok(yards(list[take].goal, list[bark].goal) < 5, 'at the same Oracle Tree Bark, not back at Arynia');
+	const fandral = at(list, 'turnin 935 (Crown of the Earth)', is('turnin', 935));
+	const hand = at(list, 'turnin 940 (Teldrassil)', is('turnin', 940));
+	assert.equal(list[hand].step, list[fandral].step, 'handed in on the Darnassus visit that already goes to Fandral');
+	assert.ok(yards(list[hand].goal, list[fandral].goal) < 5, 'to Fandral himself');
 });
 
 test(`${DUN_MOROGH}: Supplies to Tannok is taken from Hands Springsprocket at the tunnel, leaving Coldridge Valley`, { skip }, () => {
@@ -662,6 +707,21 @@ test(`Hotline's report: a Paladin heals the Injured Deathguard before turning in
 	assert.ok(list.some((g) => g.step === step && g.goal.t === 'goto' && located(g)), 'the healing step leads to the Injured Deathguard');
 });
 
+// --- Tirisfal (yiliev0, a Scourge Paladin, #672): the arrow for the Injured
+// Deathguard pointed 60 yards north of the church, while some lie in front
+// of it (Forever's quest data pins 31.6,65.8; a data/forever spawn at 31.59,65.83).
+
+test(`yiliev0's report (#672): the healing step leads to the Injured Deathguard in front of the church`, { skip }, () => {
+	const list = goals(TIRISFAL).filter(forClass('PALADIN'));
+	const step = list[at(list, 'complete 90902', is('complete', 90902))].step;
+	const arrow = list.find((g) => g.step === step && g.goal.t === 'goto');
+	const church = list.find(({ goal }) => goal.t === 'turnin' && goal.quest === 98601).goal;
+	assert.equal(arrow.goal.map, church.map, 'the same map as Aramis');
+	const { point } = makeProjector(data.mapFrames);
+	const where = (g) => point(g.map, g.x, g.y, g.f);
+	assert.ok(dist(where(arrow.goal), where(church)) < 40, 'within 40 yards of Aramis Hammerhand at the church');
+});
+
 // --- Durotar (AndarKerran): A Pain in the Neck (96873) is for enchanters.
 
 // A guide played by the Engine for one character (`who`: race, raceName,
@@ -935,7 +995,7 @@ test(`${HILLSBRAD_ALLIANCE}: Lou-Saydus's report: Nek'rosh's Gambit, taken after
 });
 
 // --- Westfall (#144): Alba Fairmoon's Toxic Soil chain is not for Humans on
-// Forever (Wowhead Forever: Dwarf, Night Elf, Gnome, Skyborne).
+// Forever (Forever's quest data: Dwarf, Night Elf, Gnome, Skyborne).
 
 test(`${WESTFALL}: Alba Fairmoon's chain is not given to Humans (#144)`, { skip }, () => {
 	const chain = new Set([92742, 92744, 92745, 92747, 92748]);
@@ -1170,15 +1230,17 @@ test(`${ZEPHRAS_HORDE}: Sato's report: Welcome to Shen'dar Village follows its o
 });
 
 // Aggressive Encroachment: the Scrawny Ursera are on the slope west of
-// Thendal Village (Wowhead Forever), not in the village.
-test('Sato\'s report: the Scrawny Ursera step leads to the slope west of Thendal Village', { skip }, () => {
-	const corrections = require('../tools/lib/data/corrections.json');
-	const wowhead = corrections.npcs[250926].addSpawns[2521].pts;
-	assert.ok(wowhead.every(([x]) => x <= 41.6), 'the corrected spawns are all west of the village');
+// Thendal Village (Forever's quest data), not in the village. That spawn fix is
+// in the private corrections overlay, so this needs it.
+test('Sato\'s report: the Scrawny Ursera step leads to the slope west of Thendal Village', { skip }, (t) => {
+	const fix = (loadCorrections().npcs[250926] || {}).addSpawns;
+	if (!fix) return t.skip('needs the private corrections overlay (data/local/corrections-private.json)');
+	const fixed = fix[2521].pts;
+	assert.ok(fixed.every(([x]) => x <= 41.6), 'the corrected spawns are all west of the village');
 	for (const guide of [ZEPHRAS_HORDE, ZEPHRAS_ALLIANCE]) {
 		const list = goals(guide);
 		const { goal } = list[at(list, `${guide}: Scrawny Ursera Claw`, (g) => g.t === 'collect' && g.item === 251918)];
-		assert.ok(wowhead.some(([x, y]) => close(goal, { map: 2521, x, y }, 0.3)), `${guide}: the arrow's point ${goal.x},${goal.y} is at a Scrawny Ursera spawn`);
+		assert.ok(fixed.some(([x, y]) => close(goal, { map: 2521, x, y }, 0.3)), `${guide}: the arrow's point ${goal.x},${goal.y} is at a Scrawny Ursera spawn`);
 		for (const sp of (goal.spots || []).filter((o) => !o.alt)) assert.ok(sp.x <= 41.7, `${guide}: the spot ${sp.x},${sp.y} is west of the village`);
 	}
 });
@@ -1648,7 +1710,7 @@ test(`${ELWYNN}: zeike's report (#553): Forest's Edge does not wait for the rare
 });
 
 // --- A goal on a neighbour's map (#246): Kadrak stands at the Mor'shan
-// Rampart, in the Barrens (Wowhead Forever; AreaTable puts the Rampart, 1703,
+// Rampart, in the Barrens (Forever's quest data; AreaTable puts the Rampart, 1703,
 // under the Barrens), where the Barrens and Ashenvale maps overlap. The step's
 // `zone Ashenvale` put him on Ashenvale's map, so the travel planner took him
 // for a target in Ashenvale and sent players on the Gold Road through the
@@ -1686,20 +1748,20 @@ test('#246: every goal with Tirion leads to Tirion Fordring at his hut, never to
 
 // The same pattern everywhere: where the zone maps overlap, the data spawns an
 // NPC or object at one spot on both maps, and the step's zone picks the map.
-// A goal on the map of a zone Wowhead Forever does not list it in, while the
-// data has it at that spot on a map of one Wowhead lists, routes the player
+// A goal on the map of a zone Forever's quest data does not list it in, while
+// the data has it at that spot on a map of one it lists, routes the player
 // standing beside it through the crossing to the other zone and back (the
 // travel planner takes the target's zone from its map). Drops count when no
-// dropper is listed in the goal's zone. Needs Wowhead Forever's list cache
-// (data/sources/wowhead/codex, `polestar codex build`).
+// dropper is listed in the goal's zone. Needs Forever's list cache
+// (data/sources/web/codex, `polestar codex build`).
 const NEIGHBOUR_MAP = new Set([
 	// The optional hand-in at Garush shares a step with the Alliance's at Pureheart in Western Plaguelands.
 	'forever/reputation/argent-dawn.guide talk npc 10839',
 ]);
-const wowheadLists = fs.existsSync(path.join(SOURCES, 'wowhead', 'codex', 'lists', 'npc.json'));
+const webLists = fs.existsSync(path.join(SOURCES, 'web', 'codex', 'lists', 'npc.json'));
 
-test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two maps overlap', { skip: skip || (!wowheadLists && 'no Wowhead Forever list cache (data/sources/wowhead/codex/lists)') }, () => {
-	const wh = loadWowhead(SOURCES).listed;
+test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two maps overlap', { skip: skip || (!webLists && 'no Forever list cache (data/sources/web/codex/lists)') }, () => {
+	const wh = loadWeb(SOURCES).listed;
 	data = data || loadData(DATA);
 	const area = (map) => data.zone(map) && data.zone(map).areaId;
 	const world = (map, x, y, f) => {
@@ -1728,7 +1790,7 @@ test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two
 			if (elsewhere && !NEIGHBOUR_MAP.has(key)) offenders.push(`${key} (step ${step.title}, map ${goal.map})`);
 		}
 	}
-	assert.deepEqual([...new Set(offenders)], [], 'goals on the map of a zone Wowhead Forever does not place them in');
+	assert.deepEqual([...new Set(offenders)], [], 'goals on the map of a zone Forever\'s quest data does not place them in');
 });
 
 // --- Ashenvale (Zerkness #383, Ioney #396): two Paladins found no Alonso at
@@ -1806,16 +1868,20 @@ test('Zerkness\'s and Ioney\'s reports (#383, #396): every player is led to Alon
 
 // --- The Barrens (Fitz, #273): Savannah Lion Hides drop from the Patriarchs
 // in the Dry Hills and from the Matriarchs by Ratchet, but the Sprung Traps
-// the same step needs are all in the Dry Hills. The hide arrow stays there.
+// the same step needs are all in the Dry Hills. The hide arrow stays there;
+// the alternatives (alt) are only marked on the map, never picked by the arrow
+// (a lone Patriarch spawns by Ratchet too), and never the Matriarchs.
 test('forever/horde/04-the-barrens.guide: Fitz\'s report (#273): the Savannah Lion Hide arrow stays in the Dry Hills with the traps, never by Ratchet', { skip }, () => {
 	const list = goals('forever/horde/04-the-barrens.guide');
 	for (const quest of [95494, 95507]) {
 		const { goal } = list[at(list, `the Dry Hills collect for ${quest}`, is('collect', quest))];
-		for (const p of [goal, ...(goal.spots || [])]) {
+		for (const p of [goal, ...(goal.spots || []).filter((s) => !s.alt)]) {
 			const where = `${goal.itemName} at ${p.x},${p.y}`;
 			assert.ok(p.x >= 40 && p.x <= 52 && p.y >= 10 && p.y <= 22, `${where} is in the Dry Hills`);
 			assert.ok(Math.hypot(p.x - 60, p.y - 33) > 10, `${where} is not near Ratchet's Matriarchs (60,33)`);
 		}
+		const matriarchs = (goal.spots || []).filter((s) => s.n > 1 && Math.hypot(s.x - 60, s.y - 33) <= 10);
+		assert.deepEqual(matriarchs, [], `${goal.itemName}: no mark at the Matriarchs' camp`);
 	}
 });
 
@@ -1888,7 +1954,7 @@ test(`Tazul's report: Elemental Bracers counts the five bracers before the Divin
 
 // --- Harvesting the Harvesters (Smuve, #298): the Precessive Autocognition
 // Assembly that starts it drops about once in 900 kills of the Molsen Farm
-// golems and watchers (Wowhead Forever item=255155: 161 of 187,474 Harvest
+// golems and watchers (Forever's quest data, item 255155: 161 of 187,474 Harvest
 // Watchers, 54 of 46,307 Rusty Harvest Golems, checked 2026-10-17). The loot
 // and the accept are optional goals of the farm step, so it does not wait for
 // a drop most players never see; the turn-in at Saldean's Farm is plain and
@@ -2283,8 +2349,8 @@ test(`${DUROTAR}: tor's report (#351): Encroachment is taken after the Tiragarde
 // does, each heart's goal reads its own line.
 test("forever/class/warlock/incubus-horde.guide: Phyz's report (#412): Avelina's and Isaac's hearts each read their own line of Hearts of the Lovers", { skip }, () => {
 	const corrected = loadData(DATA);
-	const fix = require('../tools/lib/data/corrections.json').quests['65593'];
-	assert.ok(fix, 'corrections.json corrects 65593');
+	const fix = loadCorrections().quests['65593'];
+	assert.ok(fix, 'the corrections correct 65593');
 	Object.assign(corrected.quest(65593), fix.set);
 	const file = path.join(OFFICIAL_DIR, 'forever/class/warlock/incubus-horde.guide');
 	const { guides } = compileSources([{ file, text: fs.readFileSync(file, 'utf8') }], corrected);
@@ -2337,6 +2403,22 @@ test(`${ASHENVALE}: Ioney's report (#614): Sida's Bag is searched for at Ironbea
 	assert.ok(goal.map === 1437 && tomb(goal), `the point ${goal.x},${goal.y} is at Ironbeard's Tomb`);
 	const arrow = (goal.spots || []).filter((s) => !s.alt);
 	assert.ok(arrow.length && arrow.every(tomb), `the arrow picks only the tomb: ${JSON.stringify(goal.spots)}`);
+});
+
+// Ioney (#617): "guide wants me to grind till level 28, i just reached level
+// 27". The grind to 28 for Pilot Longbeard's quest (1179, from level 28) came
+// at the Dragonmaw camp before the hearth to Menethil, so the hand-ins there
+// (about 7,200 XP) never counted towards it. It now comes after them, at the
+// same camp on the walk east to Dun Algaz.
+
+test(`${ASHENVALE}: Ioney's report (#617): the grind to 28 comes after the Menethil hand-ins, before Pilot Longbeard`, { skip }, () => {
+	const list = goals(ASHENVALE);
+	const grind = at(list, 'level 28', (g) => g.t === 'level' && g.level === 28);
+	for (const quest of [306, 484, 470, 98282]) {
+		assert.ok(at(list, `turnin ${quest}`, is('turnin', quest)) < grind, `the Menethil hand-in ${quest} counts towards 28`);
+	}
+	assert.ok(at(list, 'hearth to Menethil', (g) => g.t === 'hearth' && g.location === 'Deepwater Tavern') < grind, 'the grind is after the hearth');
+	assert.ok(grind < at(list, 'accept 1179', is('accept', 1179)), 'level 28 before Pilot Longbeard');
 });
 
 // Pynte (#327): "Timberling Seeds quest points me to the north of Teldrassil
@@ -2519,4 +2601,79 @@ test(`${ELWYNN}: Nittepitte's report (#613): Marshal Dughan's turn-ins come betw
 	assert.ok(at(list, 'turnin 99131', is('turnin', 99131)) < kelp, 'Baited for Success is handed to Jason on the way in');
 	assert.ok(kelp < dughan && dughan < escape, 'Collecting Kelp, then Dughan, then The Escape');
 	assert.equal(list[kelp].s, list[escape].s, 'all in the same Goldshire step');
+});
+
+// Nittepitte (#612): "it should tell you to pick up Mining Tools while
+// discovering the Jasperlode Mine." The step led to the mine's far end first,
+// then out to the Kobold Geomancers, and only then back in for the Mining
+// Tools, which lie along the tunnel from the entrance. The tools now come
+// first, on the walk in; the geomancers on the way out.
+
+test(`${ELWYNN}: Nittepitte's report (#612): the Mining Tools are picked up on the walk into the Jasperlode Mine, before its far end`, { skip }, () => {
+	const list = goals(ELWYNN);
+	const tools = at(list, 'collect 247816', (g) => g.t === 'collect' && g.item === 247816 && g.quest === 91732);
+	const explore = at(list, 'complete 76', is('complete', 76));
+	const geomancers = at(list, 'kill 476', is('kill', 91723));
+	assert.equal(list[tools].s, list[explore].s, 'one step in the mine');
+	assert.ok(tools < explore && explore < geomancers, 'the tools, then the far end, then the geomancers');
+	const entrance = list.slice(0, tools).reverse().find(({ goal }) => goal.t === 'goto');
+	assert.ok(entrance, 'the step before is the walk to the entrance');
+	const spots = list[tools].goal.spots || [list[tools].goal];
+	for (const s of spots) {
+		assert.ok(yards(entrance.goal, { map: list[tools].goal.map, ...s }) < yards(entrance.goal, list[explore].goal), `the tools at ${s.x},${s.y} lie between the entrance and the far end`);
+	}
+});
+
+test(`${ASHENVALE}: #424: the Horn of Awakening is taken from Kerlonian's Chest at the Grove, before the escort`, { skip }, () => {
+	const list = goals(ASHENVALE);
+	const horn = at(list, 'collect 13536 quest 5321 (Horn of Awakening)', (g) => g.t === 'collect' && g.item === 13536 && g.quest === 5321);
+	const turnin = at(list, 'turnin 5321', is('turnin', 5321));
+	assert.ok(horn < turnin, 'the horn comes before the hand-in at Maestra\'s Post');
+	assert.ok(located(list[horn]), 'the arrow leads to the chest');
+	assert.equal(list[horn].goal.map, 1439, 'the chest is at the Grove of the Ancients in Darkshore');
+});
+
+// A bare `complete` that opens its step has no place of its own and nothing
+// placed before it, so the arrow showed nothing until the quest was done
+// (#303's leftovers; #632 and #646 place the Horde ones). Each now leads to
+// its objective: the bears, Shay's destination, the Faulk brothers.
+test('Alliance: a quest objective that opens its step leads the arrow to the objective (#303 leftovers)', { skip }, () => {
+	data = data || loadData(DATA);
+	for (const [file, quest, target] of [
+		['forever/alliance/03-darkshore.guide', 2118, { npc: 2164 }], // Plagued Lands: Rabid Thistle Bears
+		['forever/alliance/40-50/03-feralas.guide', 2845, { event: 2845 }], // Wandering Shay: Rockbiter's camp
+		['forever/alliance/dwarf-gnome/01-dun-morogh.guide', 1783, { npc: 6177 }], // The Tome of Divinity: Narm Faulk
+		['forever/alliance/human/01-elwynn-forest.guide', 1786, { npc: 6172 }], // The Tome of Divinity: Henze Faulk
+	]) {
+		const list = goals(file);
+		const { goal } = list[at(list, `complete ${quest}`, is('complete', quest))];
+		assert.ok(located({ goal }), `${file}: complete ${quest} has a place for the arrow`);
+		const places = target.npc
+			? data.npcs[target.npc].spawns[goal.map].pts.map(([x, y]) => ({ map: goal.map, x, y }))
+			: data.quests[target.event].objectives.filter((o) => o.type === 'event').map((o) => ({ map: o.map, x: o.x, y: o.y }));
+		const near = Math.min(...places.map((p) => yards(goal, p)));
+		assert.ok(near < 30, `${file}: complete ${quest} leads to its objective (${near.toFixed(0)} yd away)`);
+	}
+});
+
+// --- Cozy Sleeping Bag (Hotline, #698): every quest of the chain needs level
+// 14, and a level 13 Horde Paladin was sent to the Barrens for a note it could
+// not take yet. Polestar holds back only Class guides at their gate by itself,
+// so the guide waits for the level before each faction sets out.
+test(`Hotline's report (#698): the Cozy Sleeping Bag chain waits for level 14 before either faction sets out`, { skip }, () => {
+	const list = goals('forever/miscellaneous/cozy-sleeping-bag.guide');
+	for (const faction of ['Alliance', 'Horde']) {
+		const mine = list.filter(({ step, goal }) => [step.only, goal.only].every((o) => !o || !o.factions || o.factions.includes(faction)));
+		let reached = 1;
+		let accepts = 0;
+		for (const { goal } of mine) {
+			if (goal.t === 'level') reached = Math.max(reached, goal.level);
+			if (goal.t !== 'accept') continue;
+			accepts++;
+			assert.ok((goal.minLevel || 1) <= reached, `${faction}: accept ${goal.quest} (from level ${goal.minLevel}) comes after the guide waits for that level`);
+			reached = Math.max(reached, goal.minLevel || 1);
+		}
+		assert.ok(accepts > 0, `${faction}: the chain is offered`);
+		assert.ok(reached >= 14, `${faction}: the chain's level 14 is reached before it starts`);
+	}
 });
