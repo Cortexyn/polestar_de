@@ -389,7 +389,7 @@ fn the_start_page_invites_the_player_to_the_discord_community_its_mark_and_the_i
 		link:Click()
 		emit({ seen = seen, copy = PolestarCopy ~= nil and PolestarCopy:IsShown() and PolestarCopy.Box:GetText(),
 			shared = Polestar.DiscordURL })"#);
-	assert_eq!(out["seen"], json!({ "link": "discord.gg/vMbee6F2e9", "head": true, "line": true, "mark": true, "own": true, "kind": "Button" }), "the address reads as a link, not a field");
+	assert_eq!(out["seen"], json!({ "link": "discord.gg/polestar", "head": true, "line": true, "mark": true, "own": true, "kind": "Button" }), "the address reads as a link, not a field");
 	assert!(truthy(&out["shared"]) && out["copy"] == out["shared"], "the copy window holds the shared invite: {}", out["copy"]);
 }
 
