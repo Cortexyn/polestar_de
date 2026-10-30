@@ -700,7 +700,7 @@ local list = {
 }
 local function sum(pins)
 	local out = {}
-	for i, p in ipairs(pins) do out[i] = { p.id, p.map, p.x, p.f or false, p.icon, p.ring and true or false, p.glow or false, p.priority } end
+	for i, p in ipairs(pins) do out[i] = { p.id, p.map, p.x, p.f or false, p.icon, p.ring and true or false, p.ring2 and true or false, p.glow or false, p.priority } end
 	return out
 end
 local base = { kind = "rare", list = list, level = 20, now = 100000,
@@ -715,19 +715,19 @@ emit({ all = sum(all), grey = sum(grey), greyLevel = { R.GreyLevel(5), R.GreyLev
 	assert_eq!(
 		out["all"],
 		json!([
-			[1, 1429, 10, false, "qol-target", false, false, 2],
-			[2, 1429, 20, "e", "qol-target", false, false, 2],
-			[2, 1429, 40, false, "qol-target", false, false, 2],
-			[2, 1436, 20, false, "qol-target", false, false, 2],
-			[3, 1429, 50, false, "qol-target", false, false, 2],
-			[4, 1429, 60, false, "qol-target", true, false, 3],
-			[6, 1429, 70, false, "qol-target", false, true, 4],
+			[1, 1429, 10, false, "map:rare", false, false, false, 2],
+			[2, 1429, 20, "e", "map:rare", false, false, false, 2],
+			[2, 1429, 40, false, "map:rare", false, false, false, 2],
+			[2, 1436, 20, false, "map:rare", false, false, false, 2],
+			[3, 1429, 50, false, "map:rare", false, false, false, 2],
+			[4, 1429, 60, false, "map:rare", true, false, false, 3],
+			[6, 1429, 70, false, "map:rare", false, true, false, 4],
 		])
 	);
 	let grey: Vec<Value> = out["grey"].as_array().unwrap().iter().map(|p| p[0].clone()).collect();
 	assert_eq!(json!(grey), json!([2, 2, 2, 3, 4, 6]), "level 3 is grey at 20 (grey up to 13)");
 	assert_eq!(out["greyLevel"], json!([0, 13, 35, 51]));
-	assert_eq!(out["treasure"], json!(["icon-treasure", "treasure", "treasure:2843", 13]));
+	assert_eq!(out["treasure"], json!(["map:treasure", "treasure", "treasure:2843", 13]));
 	assert_eq!(out["tip"], "function");
 }
 

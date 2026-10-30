@@ -1019,7 +1019,8 @@ fn minimap_projection_honours_view_radius_rotation_and_clamps_to_the_rim() {
 	near(num(&out["rotNorth"]["x"]), 100.0 * s, e, "");
 	near(num(&out["rotNorth"]["y"]), 0.0, e, "");
 	// Out of range: pinned to the rim, pointer turned outward (east = -90 degrees).
-	let limit = 70.0 - 14.0 * 1.4 * 0.35;
+	// The target is a map mark: its medallion (1.4 times the mark) stops at the rim.
+	let limit = 70.0 - 14.0 * 1.4 * 1.4 * 0.5;
 	near(num(&out["farEast"]["x"]), limit, e, "");
 	near(num(&out["farEast"]["y"]), 0.0, e, "");
 	assert_eq!(out["farEast"]["edge"], true);

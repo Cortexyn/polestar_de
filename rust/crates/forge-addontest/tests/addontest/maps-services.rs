@@ -397,23 +397,23 @@ fn the_records_kept_for_filter_changes_are_slim_and_friendly_only() {
 }
 
 #[test]
-fn services_are_opt_in_with_a_lean_category_set_leave_flight_masters_and_inns_to_the_travel_layers_and_use_the_vendor_gossip_icon_and_a_distinct_chest_for_bankers() {
+fn services_are_opt_in_with_a_lean_category_set_leave_flight_masters_and_inns_to_the_travel_layers_and_give_each_category_its_own_map_glyph() {
 	let res = run_opts(
 		r#"
     local icons,on={},{}
     for _,category in ipairs(M.ServiceCategories) do
-      icons[category.key]=category.icon
+      icons[category.key]=category.mark
       if Polestar.Get("maps.serviceFilters."..category.key) then on[#on+1]=category.key end
     end
     emit({enabled=Polestar.Get("maps.servicePins"),on=on,inn=icons.innkeeper==nil,flight=icons.flightmaster==nil,
       vendor=icons.vendor,banker=icons.banker,reads=__reads})
-    emit(icons.weapon)
+    emit(M.ServiceCategories[4].icon)
   "#,
 		None,
 		"",
 	);
 	let (out, weapon) = (&res[0], text(&res[1]));
-	assert!(weapon.contains("AddOns") && weapon.ends_with("icon-train"));
+	assert!(weapon.contains("AddOns") && weapon.ends_with("icon-trainer-weapon"), "{weapon}");
 	assert_eq!(
 		*out,
 		json!({
@@ -421,8 +421,8 @@ fn services_are_opt_in_with_a_lean_category_set_leave_flight_masters_and_inns_to
 			"on": ["mailbox", "class"],
 			"inn": true,
 			"flight": true,
-			"vendor": r"Interface\GossipFrame\VendorGossipIcon",
-			"banker": r"Interface\Icons\INV_Misc_TreasureChest01a",
+			"vendor": "map:vendor",
+			"banker": "map:bank",
 			"reads": 0,
 		})
 	);
@@ -471,7 +471,7 @@ fn only_city_services_share_a_region_map_stack_nearby_country_services_quests_an
     local lines={}
     f.data.pin.tooltip({SetText=function(_,s) lines[#lines+1]=s end,AddLine=function(_,s) lines[#lines+1]=s end})
     local out={frames=#P.GetWorldFrames(),city=f.data.pin.city,count=f.data.pin.count,
-      icons=#f.data.pin.stack,badge=f.count~=nil,raw=#P.GetLayer("maps.services"),
+      icons=#f.data.pin.stack,badge=f.data.pin.badge,raw=#P.GetLayer("maps.services"),
       minimap=#P.GetMinimapFrames("maps.services"),lines=lines}
     WorldMapFrame.ScrollContainer.currentScale=6
     WorldMapFrame.ScrollContainer.zoomPercent=1
@@ -485,7 +485,7 @@ fn only_city_services_share_a_region_map_stack_nearby_country_services_quests_an
   "#,
 	);
 	let got: Vec<Value> = ["frames", "city", "count", "icons", "badge", "raw", "minimap"].iter().map(|k| out[*k].clone()).collect();
-	assert_eq!(Value::from(got), json!([5, 9002, 3, 3, false, 6, 6]));
+	assert_eq!(Value::from(got), json!([5, 9002, 3, 3, 3, 6, 6]));
 	assert_eq!(out["lines"][0], "Test City");
 	let lines = out["lines"].as_array().unwrap();
 	assert!(lines.contains(&json!("3 service points")));

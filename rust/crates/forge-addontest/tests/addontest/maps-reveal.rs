@@ -312,7 +312,7 @@ fn dungeon_pins_the_codex_loads_only_when_the_world_map_opens_one_pin_per_known_
 	);
 	assert_eq!(out["atLogin"], json!({ "loads": 0, "layer": false }), "nothing loads at login");
 	assert_eq!(out["loads"], 1);
-	assert_eq!(out["keys"], json!(["deadmines@42.5,71.7:icon-dungeon", "hall-of-thanes@10,20:icon-dungeon"]));
+	assert_eq!(out["keys"], json!(["deadmines@42.5,71.7:map:dungeon", "hall-of-thanes@10,20:map:dungeon"]));
 	assert_eq!(out["color"], true);
 	assert_eq!(out["off"], true);
 }

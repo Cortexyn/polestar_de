@@ -1809,6 +1809,11 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
 -- L["Characters"] = ""
+-- L["Map icons"] = ""
+-- L["Icon pack"] = ""
+-- L["The medallion under every mark on the world map and the minimap. The skin's: Polestar's, Halo's, or Hearth's for Hearth and the game's own looks. Glyphs only: no medallion."] = ""
+-- L["The skin's icons"] = ""
+-- L["Glyphs only"] = ""
 
 -- Rares/Rares.lua
 L["Raid warning"] = "团队通知"
