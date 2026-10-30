@@ -2223,6 +2223,29 @@
 		],
 		"note": "Call of Fire (Dun Morogh, Dwarf Shaman) lists Fire Tar first, then the Reagent Pouch. The merged data had the two the other way round, so `quest 94466.1` named the pouch."
 	},
+	"95217": {
+		"set": {
+			"objectives": [
+				{
+					"type": "item",
+					"id": 2840,
+					"count": 12,
+					"text": "Copper Bar"
+				},
+				{
+					"type": "item",
+					"id": 267416,
+					"count": 4,
+					"text": "Toughened Boar Hide"
+				}
+			]
+		},
+		"source": {
+			"kind": "in-game-check",
+			"ref": "#727: the quest log asks for 12 Copper Bars and 4 Toughened Boar Hides"
+		},
+		"note": "The Quarry's Smith (Dun Morogh, blacksmiths) asks for 12 Copper Bars, then 4 Toughened Boar Hides, so the hide is objective 2. The merged data listed only the hide, so `quest 95217.1` named it. Found by TP1186 in #727."
+	},
 	"95508": {
 		"set": {
 			"objectives": [
