@@ -903,7 +903,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "Отк
 L["Opens the inner doors of Dire Maul's North and West wings."] = "Открывает внутренние двери северного и западного крыльев Забытого Города."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "Открывает черный ход Гномрегана — вход через Мастерскую."
 L["Opens the doors of the Armory and the Cathedral."] = "Открывает двери Оружейной и Собора."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Открывает ворота на пути Орды в город Даларан; одного ключа достаточно для всей группы. Альянс отправляет внутрь Образ верховного мага Модеры."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- UI/UI.lua
 L["Map %d"] = "Карта %d"
@@ -1808,6 +1808,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 
 -- Rares/Rares.lua
 L["Raid warning"] = "Предупреждение рейда"
@@ -2329,6 +2330,7 @@ L["Usage: /polestar import delete <guide-id>"] = "Использование: /p
 L["Removed imported guide %s."] = "Импортированный гайд %s удален."
 L["No imported guide with id %s."] = "Нет импортированного гайда с id %s."
 L["Open the Import page; import clear / import delete <id>: remove imports"] = "Открыть страницу импорта; import clear / import delete <id>: удалить импортированное"
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "автор: %s"
@@ -2543,6 +2545,36 @@ L["on GitHub"] = "на GitHub"
 L["Thank you for making Polestar possible."] = "Спасибо, что делаете Polestar возможным."
 L["No names here yet."] = "Здесь пока нет имён."
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Arrow & routes) to use Polestar's arrow."] = "Ведет Shortest Path Forever. Отключите «Вести через Shortest Path Forever, если он установлен» (Настройки, Стрелка и маршруты), чтобы использовать стрелку Polestar."
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Integrations) to use Polestar's arrow."] = "Сейчас ведет Shortest Path Forever. Чтобы использовать стрелку Polestar, отключите \"Вести через Shortest Path Forever, если он установлен\" (Настройки, Интеграции)."
@@ -2579,3 +2611,4 @@ L["No names here yet."] = "Здесь пока нет имён."
 -- L["Character"] = "Персонаж"
 -- L["Session"] = "Сеанс"
 -- L["Counts and the current session in chat."] = "Счетчики и текущий сеанс в чат."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Открывает ворота на пути Орды в город Даларан; одного ключа достаточно для всей группы. Альянс отправляет внутрь Образ верховного мага Модеры."

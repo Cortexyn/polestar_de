@@ -1038,6 +1038,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 
 -- UI/Dungeons.lua
 L["Ready to turn in"] = "Bereit zur Abgabe"
@@ -1445,6 +1446,7 @@ L["Forgets recorded entries and runs (the server's own limit is not affected)."]
 L["Minimap button"] = "Minikarten-Button"
 L["A Polestar button on the edge of the minimap. Click to show or hide the guide, right-click for settings, drag to move it."] = "Ein Polestar-Button am Rand der Minikarte. Klicke, um den Guide ein- oder auszublenden, Rechtsklick für die Einstellungen, ziehen zum Verschieben."
 -- L["Forget"] = ""
+-- L["Clear"] = ""
 
 -- Quests/Options.lua
 L["Any level"] = "Jede Stufe"
@@ -2251,7 +2253,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "Öffne
 L["Opens the inner doors of Dire Maul's North and West wings."] = "Öffnet die inneren Türen des Nord- und Westflügels des Düsterbruchs."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "Öffnet Gnomeregans Hintertür, den Werkstatteingang."
 L["Opens the doors of the Armory and the Cathedral."] = "Öffnet die Türen der Waffenkammer und der Kathedrale."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Öffnet das Tor des Weges der Horde in die Stadt Dalaran; ein Schlüssel öffnet es für die Gruppe. Die Allianz wird vom Abbild der Erzmagierin Modera hineingeschickt."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- Nav/Handoff.lua
 L["Hand guiding to Shortest Path Forever"] = "Führung an Shortest Path Forever abgeben"
@@ -2297,6 +2299,7 @@ L["Usage: /polestar import delete <guide-id>"] = "Verwendung: /polestar import d
 L["Removed imported guide %s."] = "Importierter Guide %s entfernt."
 L["No imported guide with id %s."] = "Kein importierter Guide mit der ID %s."
 L["Open the Import page; import clear / import delete <id>: remove imports"] = "Die Import-Seite öffnen; import clear / import delete <id>: Importe entfernen"
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "von %s"
@@ -2519,6 +2522,36 @@ L["No names here yet."] = "Noch keine Namen."
 -- Core/Data.lua
 -- L["Polestar no longer uses the old folders Polestar_Guides_<language> and Polestar_Names_<language> (%s): Polestar_<language> holds both now. Close the game and delete them from Interface/AddOns."] = ""
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["The arrow's target and the areas it spawns in."] = "Das Ziel des Pfeils und die Gebiete, in denen es spawnt."
 -- L["The arrow's target, the stops of its travel route, the step's other goals and the areas their mobs and objects spawn in."] = "Das Ziel des Pfeils, die Stationen seiner Reiseroute, die anderen Ziele des Schritts und die Gebiete, in denen ihre Mobs und Objekte spawnen."
@@ -2621,3 +2654,4 @@ L["your next stop"] = "deinem nächsten Halt"
 -- L["Character"] = "Charakter"
 -- L["Session"] = "Sitzung"
 -- L["Counts and the current session in chat."] = "Zählstände und die aktuelle Sitzung im Chat."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Öffnet das Tor des Weges der Horde in die Stadt Dalaran; ein Schlüssel öffnet es für die Gruppe. Die Allianz wird vom Abbild der Erzmagierin Modera hineingeschickt."

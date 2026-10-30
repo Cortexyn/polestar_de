@@ -903,7 +903,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "Abre o
 L["Opens the inner doors of Dire Maul's North and West wings."] = "Abre as portas internas das alas Norte e Oeste de Gládio Cruel."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "Abre a porta dos fundos de Gnomeregan, a entrada da Oficina."
 L["Opens the doors of the Armory and the Cathedral."] = "Abre as portas do Arsenal e da Catedral."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Abre o portão do caminho da Horda para a Cidade de Dalaran; uma chave o abre para o grupo. A Aliança é enviada pela Imagem da Arquimaga Modera."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- UI/UI.lua
 L["Map %d"] = "Mapa %d"
@@ -1808,6 +1808,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 
 -- Rares/Rares.lua
 L["Raid warning"] = "Aviso do raide"
@@ -2329,6 +2330,7 @@ L["Usage: /polestar import delete <guide-id>"] = "Uso: /polestar import delete <
 L["Removed imported guide %s."] = "Guia importado %s removido."
 L["No imported guide with id %s."] = "Nenhum guia importado com o id %s."
 L["Open the Import page; import clear / import delete <id>: remove imports"] = "Abre a página Importar; import clear / import delete <id>: remove importações"
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "de %s"
@@ -2543,6 +2545,36 @@ L["on GitHub"] = "no GitHub"
 L["Thank you for making Polestar possible."] = "Obrigado por tornar o Polestar possível."
 L["No names here yet."] = "Nenhum nome ainda."
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Arrow & routes) to use Polestar's arrow."] = "Shortest Path Forever está guiando. Desative \"Guiar com Shortest Path Forever quando instalado\" (Opções, Seta e rotas) para usar a seta do Polestar."
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Integrations) to use Polestar's arrow."] = "Shortest Path Forever está guiando. Desative \"Guiar com Shortest Path Forever quando instalado\" (Opções, Integrações) para usar a seta do Polestar."
@@ -2580,3 +2612,4 @@ L["No names here yet."] = "Nenhum nome ainda."
 -- L["Character"] = "Personagem"
 -- L["Session"] = "Sessão"
 -- L["Counts and the current session in chat."] = "Contagens e a sessão atual no chat."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Abre o portão do caminho da Horda para a Cidade de Dalaran; uma chave o abre para o grupo. A Aliança é enviada pela Imagem da Arquimaga Modera."

@@ -184,7 +184,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "Abre l
 L["Opens the inner doors of Dire Maul's North and West wings."] = "Abre las puertas interiores de las alas norte y oeste de La Masacre."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "Abre la puerta trasera de Gnomeregan, la entrada del Taller."
 L["Opens the doors of the Armory and the Cathedral."] = "Abre las puertas de la Armería y la Catedral."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Abre la puerta del camino de la Horda hacia la Ciudad de Dalaran; una llave la abre para el grupo. A la Alianza la envía dentro la Imagen de la archimaga Modera."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- Dungeons/Dungeons.lua
 L["Dungeons are turned off (Options > Discovery > Dungeons)."] = "Los calabozos están desactivados (Opciones > Descubrimiento > Calabozos)."
@@ -1550,6 +1550,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 
 -- UI/Packs.lua
 L["turned off in the AddOns list"] = "desactivado en la lista de AddOns"
@@ -2328,6 +2329,7 @@ L["This import string holds too much: Polestar reads up to %d KB of guide data."
 -- L["Removed imported guide %s."] = ""
 -- L["No imported guide with id %s."] = ""
 -- L["Open the Import page; import clear / import delete <id>: remove imports"] = ""
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "de %s"
@@ -2542,6 +2544,36 @@ L["on GitHub"] = "en GitHub"
 L["Thank you for making Polestar possible."] = "Gracias por hacer posible Polestar."
 L["No names here yet."] = "Aún no hay nombres."
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["The arrow's target, the stops of its travel route, the step's other goals and the areas their mobs and objects spawn in."] = "El objetivo de la flecha, las paradas de su ruta de viaje, los demás objetivos del paso y las zonas donde aparecen sus monstruos y objetos."
 -- L["The arrow's target and the areas it spawns in."] = "El objetivo de la flecha y las zonas donde aparece."
@@ -2612,3 +2644,4 @@ L["No names here yet."] = "Aún no hay nombres."
 -- L["Character"] = "Personaje"
 -- L["Session"] = "Sesión"
 -- L["Counts and the current session in chat."] = "Conteos y la sesión actual en el chat."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Abre la puerta del camino de la Horda hacia la Ciudad de Dalaran; una llave la abre para el grupo. A la Alianza la envía dentro la Imagen de la archimaga Modera."
