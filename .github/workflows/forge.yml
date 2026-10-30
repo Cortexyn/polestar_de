@@ -126,7 +126,7 @@ jobs:
       # The browser planner's package (forge-wasm's wasm-bindgen glue, wasm-opt), as www-build/build.sh
       # makes it; the page itself needs local data and is not built here.
       - name: Install wasm-pack
-        run: cargo install --locked wasm-pack
+        run: cargo install --locked wasm-pack --version 0.15.1
 
       - name: wasm-pack
         working-directory: rust/crates/forge-wasm
@@ -176,7 +176,7 @@ jobs:
 
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
-          tool: cargo-about
+          tool: cargo-about@0.9.3
 
       # The licences of every Rust dependency built into this target's binary.
       - name: Dependency licences
