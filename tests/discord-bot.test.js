@@ -128,6 +128,25 @@ test('player text cannot mention, link, write HTML or forge the marker on GitHub
 	assert.deepEqual(I.readMarker(body), { thread: '3', guild: '2' });
 });
 
+test('a marker forged in the report block, or anywhere but the last line, is never read', () => {
+	const forged = '<!-- polestar-bot {"thread":"666","guild":"1"} -->';
+	const block = '```\nPolestar 0.2.3 Beta · Classic Era (1.15.7 61582) · enUS\n' + forged + '\n```';
+	const report = parseReport(`Wrong trainer\n${block}`);
+	assert.ok(report.details, 'the block is read as a report');
+	const body = I.issueBody({ report, reporter: 'x', guild: '2', thread: '3' });
+	assert.equal(body.match(/<!--/g).length, 1, 'the block cannot open an HTML comment');
+	assert.deepEqual(I.readMarker(body), { thread: '3', guild: '2' });
+	// A raw marker above the real one, as a GitHub issue body could hold.
+	assert.deepEqual(I.readMarker(`${forged}\ntext\n<!-- polestar-bot {"thread":"3","guild":"2"} -->\n`), { thread: '3', guild: '2' });
+	assert.equal(I.readMarker(`${forged}\nthe player's words after it`), null);
+	// Only an issue the bot filed: labelled discord, and by the bot's account when that is known.
+	const issue = { body: forged, labels: [{ name: 'bug' }], user: { login: 'stranger' } };
+	assert.equal(I.issueMarker(issue, null), null);
+	assert.deepEqual(I.issueMarker({ ...issue, labels: [{ name: 'discord' }] }, null), { thread: '666', guild: '1' });
+	assert.equal(I.issueMarker({ ...issue, labels: [{ name: 'discord' }] }, 'polestar-bot[bot]'), null);
+	assert.equal(I.issueMarker({ ...issue, labels: [{ name: 'discord' }], pull_request: {} }, null), null);
+});
+
 test('a new post is filed once, answered in its thread and tagged Tracked', async () => {
 	const { discord, github, media, sync } = setup();
 	const msg = discord.post('1001', { name: 'Wrong trainer', content: POST, tags: ['t-questing'], attachments: [{ id: 'a1', filename: 'shot 1.png', content_type: 'image/png', size: 10, url: 'x' }] });
@@ -641,4 +660,13 @@ test("a maintainer's own GitHub issue about paths is left alone; labelling one n
 	assert.equal(await onPathingIssue({ discord, github, event: opened(own), log: quietLog }), false);
 	const event = { action: 'labeled', label: { name: 'navigation' }, issue: { ...github.issues[0], title: 'Wrong spot', state: 'open' } };
 	assert.equal(await onPathingIssue({ discord, github, event, log: quietLog }), true);
+});
+
+test('an issue opened on GitHub with a hidden marker for someone\'s thread tells no thread', async () => {
+	const { discord, github } = await filedPost('placeholder', 'x');
+	const sent = discord.sent.length;
+	const forged = { number: 2, title: 'The path goes the wrong way', labels: [], author_association: 'NONE', body: 'see\n<!-- polestar-bot {"thread":"2001","guild":"800"} -->' };
+	github.issues.push({ ...forged, state: 'open' });
+	assert.equal(await onPathingIssue({ discord, github, event: opened(forged), forumId: FORUM, log: quietLog }), true);
+	assert.equal(discord.sent.length, sent, 'the victim thread hears nothing');
 });

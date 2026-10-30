@@ -162,10 +162,10 @@ function releaseMessage({ repo, issue, release, owner, of = null }) {
 	return `${ping}${what} in **${name}**: update Polestar to get it. ([release notes](<${release.html_url}>), ${issueLink(repo, issue.number)})`;
 }
 
-// The thread an issue was filed from, or null (no marker, deleted, or not
-// in the forum named by forumId when one is given).
+// The thread an issue was filed from, or null (not the bot's issue, no
+// marker, deleted, or not in the forum named by forumId when one is given).
 async function threadOf(discord, issue, forumId, log) {
-	const mk = I.readMarker(issue.body);
+	const mk = I.issueMarker(issue);
 	if (!mk) return null;
 	try {
 		const thread = await discord.getChannel(mk.thread);

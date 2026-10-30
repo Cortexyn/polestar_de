@@ -249,7 +249,7 @@ function createSync({ discord, github, media, config, log = console, sleep = (ms
 	// Issues the bot filed before, read back from their markers.
 	async function loadIndex() {
 		for (const issue of await github.issuesLabelled('discord', { max: 1000 })) {
-			const mk = I.readMarker(issue.body);
+			const mk = I.issueMarker(issue);
 			if (mk && !issues.has(mk.thread)) issues.set(mk.thread, issue.number);
 		}
 		log.info(`index: ${issues.size} issues already filed from Discord`);

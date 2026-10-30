@@ -59,6 +59,7 @@ jobs:
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           DISCORD_FORUM_ID: ${{ vars.DISCORD_FORUM_ID }}
+          BOT_GITHUB_LOGIN: ${{ vars.BOT_GITHUB_LOGIN }}
           GITHUB_TOKEN: ${{ github.token }}
           DISCORD_TESTERS_CHANNEL_ID: ${{ vars.DISCORD_TESTERS_CHANNEL_ID }}
           DISCORD_TESTER_ROLE_ID: ${{ vars.DISCORD_TESTER_ROLE_ID }}
