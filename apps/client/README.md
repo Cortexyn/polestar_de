@@ -250,12 +250,16 @@ rsvg-convert -w 64 -h 64 ../../docs/assets/emblem.svg -o src-tauri/icons/tray.pn
 ## Releasing
 
 Set `version` in `package.json`, `src-tauri/Cargo.toml` and
-`src-tauri/tauri.conf.json`, then push a tag `client-v<version>`.
+`src-tauri/tauri.conf.json`, write the release notes in
+`release/notes/<version>.md` (what's new for players, the download table, first-launch
+tips; 0.1.0's is the model), then push a tag `client-v<version>`.
 [.github/workflows/client.yml](../../.github/workflows/client.yml) builds
-every platform and attaches the installers, the updater artifacts and
-`latest.json` to a draft release; publishing it makes the update visible to
-installed copies, which look for the newest published `client-v*`
-release.
+every platform, sends each installer to VirusTotal (`release/virustotal.sh`, with
+the `release` environment's `VT_API_KEY`; the reports are linked at the end of
+the notes) and attaches the installers, the updater artifacts and
+`latest.json` to a draft release; publishing it (not as the repository's latest)
+makes the update visible to installed copies, which look for the newest
+published `client-v*` release.
 
 The Linux and Windows builds hold no secrets. The signing secrets live only
 in the GitHub environment `release`, used by two jobs: the macOS build (the
