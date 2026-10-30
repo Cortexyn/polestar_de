@@ -588,6 +588,8 @@ guides you there instead.
   drop, and an alert when one shows up on your minimap, nameplates or target.
   A **Rare button** appears under the Target button when Polestar spots a rare
   nearby and targets it by name (Options, Questing, Buttons, Rare button).
+- **Characters** (`/polestar alts`): every character on the account with its
+  level, zone, guide, gold and an estimate of its rested XP.
 
 Lookup, Dungeons and Rares read the Codex, a data pack that ships in the
 release as `Polestar_Codex`. Without it Lookup still searches the guides, and
