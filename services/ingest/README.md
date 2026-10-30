@@ -22,7 +22,9 @@ their own client. What protects the data instead:
   token's SHA-256. Every other contributor route needs a registered token;
   an unknown one is answered `401 {"error":"unknown token"}`.
 - **Registrations are scarce.** At most 3 a day per network (an IPv4
-  address; an IPv6 /48 counts as one), and 10 register requests a minute.
+  address; an IPv6 /48 counts as one), at most 20 a day from one IPv6 /32
+  (many /48s from one provider or tunnel broker), and 10 register requests a
+  minute.
   The counts are kept in the database, so a restart does not reset them.
 - **Cohorts.** A contributor's cohort is the first 16 hex digits of an HMAC
   of its network under a key derived from `INGEST_SECRET` and the UTC month
@@ -135,9 +137,10 @@ method, path and status.
 
 | | |
 |---|---|
-| Request body | at most 2 MiB (413), sent within 10 s (408); `/v1/register` at most 1 KiB |
-| Per client IP | 120 requests a minute on `/v1` (429), 10 a minute on `/v1/register`, 10 unknown-token answers a minute, 3 registrations a UTC day (per network) |
+| Request body | at most 2 MiB (413), sent within 10 s (408); `/v1/register` at most 1 KiB; at most 32 upload and register bodies read at once, others answered `503` with `Retry-After: 30` before their body is read |
+| Per client IP | 120 requests a minute on `/v1` (429), 10 a minute on `/v1/register`, 10 unknown-token answers a minute, 3 registrations a UTC day (per network; 20 per IPv6 /32) |
 | Per contributor | 30 requests a minute (429, in memory, only for registered tokens), 20 MiB a UTC day (429; checked on the declared size before the body is read, and again on the body; a body not sent within 10 s counts with its declared size, or 2 MiB), one upload in flight (429), at most 8 installs (chunks from a ninth are rejected) |
+| Per cohort | 60 MiB a UTC day across every contributor in the cohort (429), so tokens gathered over a month on one network add nothing |
 | Uploads | the body is read first; then at most 4 are decoded and stored at once, others answered `503` with `Retry-After: 30`; at most 256 chunks (400) |
 | Chunks | at most 64 KiB of text and 4096 records, else rejected; decoded whole, any malformed record rejects the chunk, with the reason; the `chunk` record's seq must match the uploaded seq; uiMapIDs below 100000; at most 64 records of unknown kinds, which are dropped from the stored text; implausible ones are stored suspect |
 | Storage | uploads answer `503 {"error":"server busy, try later"}` with `Retry-After: 3600` while the database is over `INGEST_MAX_DB_MB` or the data volume has under `INGEST_MIN_FREE_GB` free (Polestar Client retries with backoff); a warning is logged at most once an hour meanwhile |

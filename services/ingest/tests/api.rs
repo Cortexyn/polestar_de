@@ -205,6 +205,20 @@ async fn registrations_per_ip_per_day() {
 }
 
 #[tokio::test]
+async fn ipv6_registrations_are_also_capped_per_32() {
+	let app = app();
+	// One registration from each of many /48s in one /32 (a tunnel broker's, say).
+	for i in 0..polestar_ingest::REGISTRATIONS_PER_DAY_V6_32 {
+		register(&app, &format!("2001:db8:{i:x}::1")).await;
+	}
+	let (status, body) = challenge(&app, "2001:db8:ff::1").await;
+	assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+	// Another /32 and IPv4 are unaffected.
+	register(&app, "2001:db9:1::1").await;
+	register(&app, IP_A).await;
+}
+
+#[tokio::test]
 async fn registration_counts_survive_a_restart() {
 	let path = std::env::temp_dir().join(format!("polestar-ingest-test-{}-{}.sqlite", std::process::id(), now()));
 	let open = || {

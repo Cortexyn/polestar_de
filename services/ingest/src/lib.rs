@@ -7,9 +7,10 @@
 //! decoded and checked for plausibility, and the maintainer can shadow-ban a contributor.
 //!
 //! The database is one connection behind one mutex, held only for queries: uploads are read,
-//! decoded and checked outside it, one chunk at a time. A body is read before an upload slot is
-//! taken; at most [`UPLOAD_CONCURRENCY`] uploads are decoded and stored at once (more are
-//! answered 503), and one contributor has at most one upload in flight.
+//! decoded and checked outside it, one chunk at a time. At most [`BODY_READS`] request bodies
+//! are read (and held in memory) at once, more are answered 503; a body is read before an
+//! upload slot is taken; at most [`UPLOAD_CONCURRENCY`] uploads are decoded and stored at once
+//! (more are answered 503), and one contributor has at most one upload in flight.
 
 pub mod backup;
 pub mod db;
@@ -46,6 +47,9 @@ pub const MAX_BODY: usize = polestar_recording::api::MAX_UPLOAD_BYTES;
 pub const MAX_REGISTER_BODY: usize = 1024;
 /// Bytes one contributor may send per UTC day.
 pub const DAILY_BYTES: u64 = 20 * 1024 * 1024;
+/// Bytes one cohort (every contributor registered from one network this month) may send per
+/// UTC day: a day's registrations' worth, so tokens gathered over a month add nothing.
+pub const COHORT_DAILY_BYTES: u64 = REGISTRATIONS_PER_DAY as u64 * DAILY_BYTES;
 /// Requests one contributor may make per minute.
 pub const REQUESTS_PER_MINUTE: u32 = 30;
 /// Requests one client IP may make per minute, on every `/v1` route.
@@ -56,9 +60,15 @@ pub const REGISTER_REQUESTS_PER_MINUTE: u32 = 10;
 pub const UNKNOWN_TOKENS_PER_MINUTE: u32 = 10;
 /// Tokens one network (an IPv4 address, an IPv6 /48) may register per UTC day.
 pub const REGISTRATIONS_PER_DAY: u32 = 3;
+/// Tokens one IPv6 /32 (a provider's or tunnel broker's allocation, many /48s) may register per
+/// UTC day, on top of the per-/48 cap.
+pub const REGISTRATIONS_PER_DAY_V6_32: u32 = 20;
 /// Uploads decoded and stored at once; more are answered 503 with [`UPLOAD_RETRY_AFTER`].
 pub const UPLOAD_CONCURRENCY: usize = 4;
-/// Seconds a client waits after a 503 because every upload slot was taken.
+/// Request bodies (uploads and registrations) read at once, so at most this many sit in memory;
+/// more are answered 503 with [`UPLOAD_RETRY_AFTER`] instead of waiting.
+pub const BODY_READS: usize = 32;
+/// Seconds a client waits after a 503 because every upload or body slot was taken.
 pub const UPLOAD_RETRY_AFTER: u32 = 30;
 /// How long a client may take to send a request body.
 pub const BODY_TIMEOUT: Duration = Duration::from_secs(10);
@@ -129,11 +139,13 @@ impl Default for Config {
 	}
 }
 
-/// The request's network as today's HMAC (see [`network`]), for the per-network limits, and
-/// its cohort; set by the client IP layer.
+/// The request's network as today's HMAC (see [`network`]), for the per-network limits, the
+/// wider IPv6 /32 it is in (see [`wide_network`]) as today's HMAC, and its cohort; set by the
+/// client IP layer.
 #[derive(Clone)]
 struct ClientIp {
 	network: String,
+	wide: Option<String>,
 	cohort: String,
 }
 
@@ -151,6 +163,8 @@ pub struct AppState {
 	register_limiter: RateLimiter,
 	unknown_limiter: RateLimiter,
 	uploads: tokio::sync::Semaphore,
+	/// Request bodies being read.
+	bodies: tokio::sync::Semaphore,
 	/// Contributors with an upload in flight.
 	uploading: Mutex<std::collections::HashSet<String>>,
 	/// Today's salt for network HMACs: (day, salt), a copy of the one in the database.
@@ -202,6 +216,16 @@ pub fn network(ip: IpAddr) -> String {
 	}
 }
 
+/// The wider network an IPv6 address also counts as for the registration cap: its /32, which is
+/// what a provider or tunnel broker is usually allocated, so many /48s from one of them share a
+/// cap. None for IPv4 (also when IPv4-mapped).
+pub fn wide_network(ip: IpAddr) -> Option<String> {
+	match ip {
+		IpAddr::V6(v6) if v6.to_ipv4_mapped().is_none() => Some(format!("{}/32", std::net::Ipv6Addr::from(u128::from(v6) & !(u128::MAX >> 32)))),
+		_ => None,
+	}
+}
+
 impl AppState {
 	pub fn new(db: Db, config: Config) -> Arc<AppState> {
 		Arc::new(AppState {
@@ -217,6 +241,7 @@ impl AppState {
 			register_limiter: RateLimiter::new(REGISTER_REQUESTS_PER_MINUTE, Duration::from_secs(60)),
 			unknown_limiter: RateLimiter::new(UNKNOWN_TOKENS_PER_MINUTE, Duration::from_secs(60)),
 			uploads: tokio::sync::Semaphore::new(UPLOAD_CONCURRENCY),
+			bodies: tokio::sync::Semaphore::new(BODY_READS),
 			uploading: Mutex::new(std::collections::HashSet::new()),
 			salt: Mutex::new((i64::MIN, [0; 32])),
 			stats_cache: Mutex::new(None),
@@ -273,9 +298,10 @@ impl AppState {
 		lock(&self.db)
 	}
 
-	/// The network's HMAC under today's salt. The salt lives in the database for that day only,
-	/// so a restart keeps the day's registration counts and cohorts.
-	async fn network_hash(self: &Arc<Self>, ip: IpAddr) -> Result<String, ApiError> {
+	/// The HMACs under today's salt of the address's network and of its wider network (see
+	/// [`wide_network`]). The salt lives in the database for that day only, so a restart keeps
+	/// the day's registration counts and cohorts.
+	async fn network_hashes(self: &Arc<Self>, ip: IpAddr) -> Result<(String, Option<String>), ApiError> {
 		let today = now().div_euclid(DAY);
 		let cached = { *lock(&self.salt) };
 		let salt = if cached.0 == today {
@@ -287,7 +313,8 @@ impl AppState {
 			*lock(&self.salt) = (today, salt);
 			salt
 		};
-		Ok(hex(&hmac(&salt, &[network(ip).as_bytes()])[..16]))
+		let hash = |net: String| hex(&hmac(&salt, &[net.as_bytes()])[..16]);
+		Ok((hash(network(ip)), wide_network(ip).map(hash)))
 	}
 
 	/// The network's cohort: 16 hex digits of its HMAC under this UTC month's key (derived from
@@ -387,8 +414,17 @@ impl ApiError {
 		ApiError(StatusCode::SERVICE_UNAVAILABLE, "too many uploads at once, try again shortly".to_owned(), Some(UPLOAD_RETRY_AFTER))
 	}
 
+	/// Every body slot is taken: a short wait, the request not read.
+	fn bodies_full() -> ApiError {
+		ApiError(StatusCode::SERVICE_UNAVAILABLE, "too many requests at once, try again shortly".to_owned(), Some(UPLOAD_RETRY_AFTER))
+	}
+
 	fn over_daily_cap() -> ApiError {
 		ApiError::new(StatusCode::TOO_MANY_REQUESTS, "daily upload limit (20 MiB) reached, try again tomorrow")
+	}
+
+	fn over_cohort_cap() -> ApiError {
+		ApiError::new(StatusCode::TOO_MANY_REQUESTS, "daily upload limit for your network reached, try again tomorrow")
 	}
 }
 
@@ -459,20 +495,20 @@ async fn read_body(body: Body, limit: usize) -> Result<Bytes, ApiError> {
 }
 
 /// Every `/v1` request: the client IP from `CF-Connecting-IP` (refused without one unless
-/// direct requests are allowed), kept only as today's HMAC of its network and its cohort, and
-/// the per-network request limit.
+/// direct requests are allowed), kept only as today's HMACs of its network and wider network and
+/// its cohort, and the per-network request limit.
 async fn client_ip(State(state): State<Arc<AppState>>, mut request: Request, next: Next) -> Result<Response, ApiError> {
 	let ip = match request.headers().get(CLIENT_IP_HEADER) {
 		Some(value) => value.to_str().ok().and_then(|s| s.trim().parse::<IpAddr>().ok()).ok_or_else(|| ApiError::new(StatusCode::BAD_REQUEST, "bad client address"))?,
 		None if state.allow_direct => IpAddr::from([127, 0, 0, 1]),
 		None => return Err(ApiError::new(StatusCode::FORBIDDEN, "direct requests are not served")),
 	};
-	let network = state.network_hash(ip).await?;
+	let (network, wide) = state.network_hashes(ip).await?;
 	if !state.ip_limiter.check(&network, Instant::now()) {
 		return Err(ApiError::too_many());
 	}
 	let cohort = state.cohort(ip, now());
-	request.extensions_mut().insert(ClientIp { network, cohort });
+	request.extensions_mut().insert(ClientIp { network, wide, cohort });
 	Ok(next.run(request).await)
 }
 
@@ -583,16 +619,34 @@ fn registration_cap() -> ApiError {
 	ApiError::new(StatusCode::TOO_MANY_REQUESTS, "registration limit for today reached, try again tomorrow")
 }
 
-async fn register(State(state): State<Arc<AppState>>, Extension(ClientIp { network: ip, cohort }): Extension<ClientIp>, body: Body) -> Result<Response, ApiError> {
+/// The networks a registration counts against, each with its daily cap: the address's network,
+/// and for IPv6 also its /32.
+fn registration_networks<'a>(network: &'a str, wide: Option<&'a str>) -> Vec<(&'a str, u32)> {
+	std::iter::once((network, REGISTRATIONS_PER_DAY)).chain(wide.map(|w| (w, REGISTRATIONS_PER_DAY_V6_32))).collect()
+}
+
+async fn register(State(state): State<Arc<AppState>>, Extension(ClientIp { network: ip, wide, cohort }): Extension<ClientIp>, body: Body) -> Result<Response, ApiError> {
 	if !state.register_limiter.check(&ip, Instant::now()) {
 		return Err(ApiError::too_many());
 	}
+	let Ok(reading) = state.bodies.try_acquire() else { return Err(ApiError::bodies_full()) };
 	let bytes = read_body(body, MAX_REGISTER_BODY).await?;
 	let request: RegisterBody = serde_json::from_slice(&bytes).map_err(|_| ApiError::new(StatusCode::BAD_REQUEST, "bad register request"))?;
+	drop((bytes, reading));
 	let now = now();
 	let today = now.div_euclid(DAY);
-	let (s, network) = (state.clone(), ip.clone());
-	if blocking(move || s.db().registrations(today, &network).map_err(internal)).await? >= REGISTRATIONS_PER_DAY {
+	let (s, network, w) = (state.clone(), ip.clone(), wide.clone());
+	let full = blocking(move || {
+		let db = s.db();
+		for (net, cap) in registration_networks(&network, w.as_deref()) {
+			if db.registrations(today, net).map_err(internal)? >= cap {
+				return Ok(true);
+			}
+		}
+		Ok(false)
+	})
+	.await?;
+	if full {
 		return Err(registration_cap());
 	}
 	let (challenge, solution) = match (request.challenge, request.solution) {
@@ -615,7 +669,7 @@ async fn register(State(state): State<Arc<AppState>>, Extension(ClientIp { netwo
 	let token = hex(&random::<32>()?);
 	let hash = hex(&Sha256::digest(token.as_bytes()));
 	// Counted and stored in one transaction, so parallel solutions cannot pass the cap.
-	match blocking(move || state.db().register(&hash, &challenge, expires, now, &ip, &cohort, REGISTRATIONS_PER_DAY).map_err(internal)).await? {
+	match blocking(move || state.db().register(&hash, &challenge, expires, now, &registration_networks(&ip, wide.as_deref()), &cohort).map_err(internal)).await? {
 		Registration::Done(_) => Ok(Json(RegisterResponse { token }).into_response()),
 		Registration::Spent => Err(ApiError::new(StatusCode::BAD_REQUEST, "challenge already used")),
 		Registration::OverCap => Err(registration_cap()),
@@ -644,7 +698,9 @@ async fn upload(State(state): State<Arc<AppState>>, Extension(ClientIp { network
 	let Some(_in_flight) = state.in_flight(&contributor) else {
 		return Err(ApiError::new(StatusCode::TOO_MANY_REQUESTS, "an upload with this token is already in progress"));
 	};
-	// The body is read before an upload slot is taken, so a slow sender holds none.
+	// The body is read before an upload slot is taken, so a slow sender holds none; it holds one
+	// of the body slots, so at most BODY_READS bodies are in memory.
+	let Ok(reading) = state.bodies.try_acquire() else { return Err(ApiError::bodies_full()) };
 	let bytes = match read_body(body, MAX_BODY).await {
 		Ok(bytes) => bytes,
 		Err(e) => {
@@ -660,7 +716,7 @@ async fn upload(State(state): State<Arc<AppState>>, Extension(ClientIp { network
 	let Ok(_permit) = state.uploads.try_acquire() else { return Err(ApiError::uploads_full()) };
 	let request: UploadRequest = serde_json::from_slice(&bytes).map_err(|e| ApiError::new(StatusCode::BAD_REQUEST, format!("bad upload: {e}")))?;
 	let body_len = bytes.len() as u64;
-	drop(bytes);
+	drop((bytes, reading));
 	if !polestar_recording::sv::valid_install(&request.install) {
 		return Err(ApiError::new(StatusCode::BAD_REQUEST, "bad install id"));
 	}
@@ -681,12 +737,13 @@ async fn upload(State(state): State<Arc<AppState>>, Extension(ClientIp { network
 		let mut ctx = polestar_recording::plausible::Context { now, highest: install.highest };
 		let prepared: Vec<_> = request.chunks.into_iter().map(|c| recording::prepare(c, s.min_build, &mut ctx)).collect();
 		let upload = Upload { contributor: &contributor, install: &request.install, uploader: &request.uploader, body_len, now };
-		s.db().upload(upload, prepared, DAILY_BYTES).map_err(internal)
+		s.db().upload(upload, prepared, DAILY_BYTES, COHORT_DAILY_BYTES).map_err(internal)
 	})
 	.await?;
 	match outcome {
 		UploadOutcome::Done(response) => Ok(Json(response)),
 		UploadOutcome::OverDailyCap => Err(ApiError::over_daily_cap()),
+		UploadOutcome::OverCohortCap => Err(ApiError::over_cohort_cap()),
 		UploadOutcome::Unknown => Err(ApiError::unknown_token()),
 	}
 }
@@ -901,6 +958,14 @@ mod tests {
 		assert_eq!(network("2001:db8:abcd:ffff::1".parse().unwrap()), network("2001:db8:abcd::9".parse().unwrap()));
 	}
 
+	#[test]
+	fn wide_networks() {
+		assert_eq!(wide_network("203.0.113.7".parse().unwrap()), None);
+		assert_eq!(wide_network("::ffff:203.0.113.7".parse().unwrap()), None);
+		assert_eq!(wide_network("2001:db8:abcd:12:1::5".parse().unwrap()).as_deref(), Some("2001:db8::/32"));
+		assert_eq!(wide_network("2001:db8:ffff::1".parse().unwrap()), wide_network("2001:db8:1::1".parse().unwrap()));
+	}
+
 	fn state(secret: &str) -> Arc<AppState> {
 		AppState::new(Db::open_in_memory().unwrap(), Config { maintainer_key: "k".repeat(32), secret: secret.to_owned(), ..Config::default() })
 	}
@@ -924,7 +989,7 @@ mod tests {
 		let token = "ab".repeat(32);
 		let hash = hex(&Sha256::digest(token.as_bytes()));
 		let at = now();
-		s.db().register(&hash, "c", at + 600, at, "net", "0123456789abcdef", 3).unwrap();
+		s.db().register(&hash, "c", at + 600, at, &[("net", 3)], "0123456789abcdef").unwrap();
 		(token, hash)
 	}
 
@@ -946,6 +1011,23 @@ mod tests {
 		assert_eq!(upload_status(&s, &token).await, (StatusCode::SERVICE_UNAVAILABLE, Some(UPLOAD_RETRY_AFTER.to_string())));
 		drop(all);
 		assert_eq!(upload_status(&s, &token).await.0, StatusCode::OK);
+	}
+
+	#[tokio::test]
+	async fn bodies_are_not_read_when_every_body_slot_is_taken() {
+		use tower::ServiceExt;
+		let s = state(&"s".repeat(32));
+		let (token, _) = contributor(&s);
+		let all = s.bodies.try_acquire_many(BODY_READS as u32).unwrap();
+		assert_eq!(upload_status(&s, &token).await, (StatusCode::SERVICE_UNAVAILABLE, Some(UPLOAD_RETRY_AFTER.to_string())));
+		let register = || Request::builder().method(Method::POST).uri("/v1/register").header(CLIENT_IP_HEADER, "198.51.100.20").body(Body::from("{}")).unwrap();
+		let response = router(s.clone()).oneshot(register()).await.unwrap();
+		assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+		assert_eq!(response.headers().get(header::RETRY_AFTER).unwrap(), &UPLOAD_RETRY_AFTER.to_string());
+		drop(all);
+		assert_eq!(upload_status(&s, &token).await.0, StatusCode::OK);
+		assert_eq!(router(s.clone()).oneshot(register()).await.unwrap().status(), StatusCode::OK);
+		assert_eq!(s.bodies.available_permits(), BODY_READS, "every slot given back");
 	}
 
 	#[tokio::test]

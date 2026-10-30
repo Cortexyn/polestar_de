@@ -210,6 +210,9 @@ pub enum UploadOutcome {
 	Done(UploadResponse),
 	/// The contributor's bytes for today would pass the daily cap; nothing was stored.
 	OverDailyCap,
+	/// The contributor's cohort's bytes for today would pass the cohort's daily cap; nothing
+	/// was stored.
+	OverCohortCap,
 	/// No such contributor (never registered, or deleted).
 	Unknown,
 }
@@ -448,20 +451,25 @@ impl Db {
 	}
 
 	/// Spends `challenge` (valid until `expires`) and creates the contributor `hash` in `cohort`,
-	/// unless `network` (today's HMAC of it) already registered `cap` contributors today.
+	/// unless one of `networks` (today's HMAC of a network, with its cap) already registered its
+	/// cap of contributors today. Each network's count goes up by one.
 	#[allow(clippy::too_many_arguments)]
-	pub fn register(&mut self, hash: &str, challenge: &str, expires: i64, now: i64, network: &str, cohort: &str, cap: u32) -> rusqlite::Result<Registration> {
+	pub fn register(&mut self, hash: &str, challenge: &str, expires: i64, now: i64, networks: &[(&str, u32)], cohort: &str) -> rusqlite::Result<Registration> {
 		let today = now.div_euclid(DAY);
 		let tx = self.conn.transaction()?;
-		let n: u32 = tx.query_row("SELECT n FROM registrations WHERE day = ?1 AND network = ?2", params![today, network], |r| r.get(0)).optional()?.unwrap_or(0);
-		if n >= cap {
-			return Ok(Registration::OverCap);
+		for &(network, cap) in networks {
+			let n: u32 = tx.query_row("SELECT n FROM registrations WHERE day = ?1 AND network = ?2", params![today, network], |r| r.get(0)).optional()?.unwrap_or(0);
+			if n >= cap {
+				return Ok(Registration::OverCap);
+			}
 		}
 		tx.execute("DELETE FROM spent_challenges WHERE expires < ?1", [now])?;
 		if tx.execute("INSERT OR IGNORE INTO spent_challenges (challenge, expires) VALUES (?1, ?2)", params![challenge, expires])? == 0 {
 			return Ok(Registration::Spent);
 		}
-		tx.execute("INSERT INTO registrations (day, network, n) VALUES (?1, ?2, 1) ON CONFLICT (day, network) DO UPDATE SET n = n + 1", params![today, network])?;
+		for &(network, _) in networks {
+			tx.execute("INSERT INTO registrations (day, network, n) VALUES (?1, ?2, 1) ON CONFLICT (day, network) DO UPDATE SET n = n + 1", params![today, network])?;
+		}
 		tx.execute("INSERT INTO contributors (hash, first_seen, last_seen, bytes_today, day, cohort) VALUES (?1, ?2, ?2, 0, ?3, ?4)", params![hash, now, today, cohort])?;
 		tx.commit()?;
 		Ok(Registration::Done(cohort.to_owned()))
@@ -490,18 +498,30 @@ impl Db {
 	}
 
 	/// Stores an upload's chunks in one transaction, unless it would take the contributor past
-	/// `daily_cap` bytes today. A blocked contributor gets the same answers as anyone, but only
-	/// its seqs, installs, kinds and totals are kept. Suspect chunks add no quest or day rows.
-	/// Chunks from an install beyond the contributor's [`MAX_INSTALLS`] are rejected.
-	pub fn upload(&mut self, upload: Upload, prepared: Vec<Prepared>, daily_cap: u64) -> rusqlite::Result<UploadOutcome> {
+	/// `daily_cap` bytes today, or its cohort (every contributor registered from its network
+	/// this month) past `cohort_cap`. A blocked contributor gets the same answers as anyone, but
+	/// only its seqs, installs, kinds and totals are kept. Suspect chunks add no quest or day
+	/// rows. Chunks from an install beyond the contributor's [`MAX_INSTALLS`] are rejected.
+	pub fn upload(&mut self, upload: Upload, prepared: Vec<Prepared>, daily_cap: u64, cohort_cap: u64) -> rusqlite::Result<UploadOutcome> {
 		let Upload { contributor, install, uploader, body_len, now } = upload;
 		let today = now.div_euclid(DAY);
 		let tx = self.conn.transaction()?;
-		let row: Option<(i64, i64, bool)> = tx.query_row("SELECT bytes_today, day, blocked FROM contributors WHERE hash = ?1", [contributor], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).optional()?;
-		let Some((bytes, day, blocked)) = row else { return Ok(UploadOutcome::Unknown) };
+		let row: Option<(i64, i64, bool, Option<String>)> =
+			tx.query_row("SELECT bytes_today, day, blocked, cohort FROM contributors WHERE hash = ?1", [contributor], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).optional()?;
+		let Some((bytes, day, blocked, cohort)) = row else { return Ok(UploadOutcome::Unknown) };
 		let used = if day == today { bytes.max(0) as u64 } else { 0 };
 		if used.saturating_add(body_len) > daily_cap {
 			return Ok(UploadOutcome::OverDailyCap);
+		}
+		if let Some(cohort) = cohort {
+			let others: i64 = tx.query_row(
+				"SELECT COALESCE(SUM(bytes_today), 0) FROM contributors WHERE cohort = ?1 AND day = ?2 AND hash != ?3",
+				params![cohort, today, contributor],
+				|r| r.get(0),
+			)?;
+			if (others.max(0) as u64).saturating_add(used).saturating_add(body_len) > cohort_cap {
+				return Ok(UploadOutcome::OverCohortCap);
+			}
 		}
 		tx.execute("UPDATE contributors SET last_seen = ?2, bytes_today = ?3, day = ?4 WHERE hash = ?1", params![contributor, now, (used + body_len) as i64, today])?;
 
@@ -899,13 +919,13 @@ mod tests {
 	fn db_with(contributors: &[&str]) -> Db {
 		let mut db = Db::open_in_memory().unwrap();
 		for (i, c) in contributors.iter().enumerate() {
-			assert_eq!(db.register(c, &format!("ch{i}"), NOW + 600, NOW, &format!("net{i}"), "0123456789abcdef", 3).unwrap(), Registration::Done("0123456789abcdef".to_owned()));
+			assert_eq!(db.register(c, &format!("ch{i}"), NOW + 600, NOW, &[(&format!("net{i}"), 3)], "0123456789abcdef").unwrap(), Registration::Done("0123456789abcdef".to_owned()));
 		}
 		db
 	}
 
 	fn send(db: &mut Db, contributor: &str, install: &str, now: i64, chunks: Vec<Prepared>) -> UploadResponse {
-		match db.upload(Upload { contributor, install, uploader: "t", body_len: 10, now }, chunks, u64::MAX).unwrap() {
+		match db.upload(Upload { contributor, install, uploader: "t", body_len: 10, now }, chunks, u64::MAX, u64::MAX).unwrap() {
 			UploadOutcome::Done(r) => r,
 			other => panic!("{other:?}"),
 		}
@@ -913,6 +933,32 @@ mod tests {
 
 	fn count(db: &Db, sql: &str) -> i64 {
 		db.conn.query_row(sql, [], |r| r.get(0)).unwrap()
+	}
+
+	#[test]
+	fn a_cohort_shares_one_daily_byte_cap() {
+		let mut db = db_with(&["a", "b", "c"]);
+		db.conn.execute("UPDATE contributors SET cohort = 'other' WHERE hash = 'c'", []).unwrap();
+		let up = |db: &mut Db, who: &str, now: i64| match db.upload(Upload { contributor: who, install: "i", uploader: "t", body_len: 10, now }, vec![], 100, 15).unwrap() {
+			UploadOutcome::Done(_) => "done",
+			UploadOutcome::OverCohortCap => "cohort",
+			other => panic!("{other:?}"),
+		};
+		assert_eq!(up(&mut db, "a", NOW), "done");
+		assert_eq!(up(&mut db, "b", NOW), "cohort", "a's bytes count against b, in the same cohort");
+		assert_eq!(up(&mut db, "c", NOW), "done", "another cohort is unaffected");
+		assert_eq!(up(&mut db, "b", NOW + DAY), "done", "a new day");
+	}
+
+	#[test]
+	fn a_registration_counts_against_every_network_it_is_in() {
+		let mut db = Db::open_in_memory().unwrap();
+		let reg = |db: &mut Db, i: u32, nets: &[(&str, u32)]| db.register(&format!("h{i}"), &format!("ch{i}"), NOW + 600, NOW, nets, "c").unwrap();
+		assert!(matches!(reg(&mut db, 0, &[("a48", 3), ("wide", 2)]), Registration::Done(_)));
+		assert!(matches!(reg(&mut db, 1, &[("b48", 3), ("wide", 2)]), Registration::Done(_)));
+		assert_eq!(reg(&mut db, 2, &[("c48", 3), ("wide", 2)]), Registration::OverCap, "the wide network is full");
+		assert_eq!(db.registrations(NOW.div_euclid(DAY), "c48").unwrap(), 0, "a refused registration counts nowhere");
+		assert!(matches!(reg(&mut db, 3, &[("c48", 3)]), Registration::Done(_)));
 	}
 
 	#[test]
