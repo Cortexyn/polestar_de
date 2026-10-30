@@ -257,7 +257,7 @@ if ns.RegisterOptions then
 				help = L["The ship's bell, the zeppelin's horn or the tram, on the Master channel so you hear it with the game in the background."] }),
 			H({ kind = "toggle", key = "nav.alertFlash", label = L["Flash the taskbar icon"], disabled = off,
 				help = L["The game's icon flashes while the game is in the background."] }),
-			{ kind = "button", label = L["Show a sample alert"], disabled = off,
+			{ kind = "button", button = L["Show"], label = L["Show a sample alert"], disabled = off,
 				help = L["See the banner and hear the boat's bell."],
 				onClick = function() Alerts.ShowSample() end },
 		},
