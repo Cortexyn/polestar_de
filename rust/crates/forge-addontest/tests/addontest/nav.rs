@@ -798,6 +798,26 @@ fn a_teldrassil_step_s_spawn_regions_cover_every_spawn_of_its_goals_and_read_at_
 }
 
 #[test]
+fn a_goal_with_more_spots_than_grouping_can_afford_draws_no_regions_instead_of_freezing_while_a_built_in_sized_one_still_groups() {
+	let out = run(&[
+		TELDRASSIL,
+		r#"
+		-- A crafted import: 1024 spots on one point, every pair within reach.
+		local piled = { t = "kill", npc = 2031, map = 1438, x = 57, y = 44, f = "e", spots = {} }
+		for i = 1, 1024 do piled.spots[i] = { x = 57, y = 44, r = 1 } end
+		-- As many spots as the busiest built-in goal (438), spread over the map.
+		local spread = { t = "kill", npc = 1984, map = 1438, x = 50, y = 50, f = "e", spots = {} }
+		for i = 0, 437 do spread.spots[i + 1] = { x = 10 + (i % 21) * 4, y = 10 + math.floor(i / 21) * 4, r = 20 } end
+		local regions = N.layers.Regions(spread)
+		emit({ piled = N.layers.Regions(piled) == nil, again = N.layers.Regions(piled) == nil, spread = regions and #regions or 0 })"#,
+	]
+	.concat());
+	assert_eq!(out["piled"], true, "1024 spots on one point: no regions");
+	assert_eq!(out["again"], true, "and the goal is not grouped again");
+	assert!(out["spread"].as_u64().unwrap() > 0, "438 spread spots still group into regions");
+}
+
+#[test]
 fn hidden_on_a_taxi_in_an_instance_and_without_a_target_zone_name_on_another_continent() {
 	let out = run(r#"
 		local seen = {}
