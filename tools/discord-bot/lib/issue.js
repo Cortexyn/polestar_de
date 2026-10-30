@@ -125,15 +125,22 @@ function issueTitle(name) {
 	return t.length > 200 ? t.slice(0, 197) + '...' : t;
 }
 
+// The report's text is the player's, so a label is made from it only when it
+// has the shape of a real one: a release version, a guide id, a game locale.
+const LABEL_VERSION = /^\d{1,2}\.\d{1,3}\.\d{1,3}(?:-(?:alpha|beta|rc|test)\.\d{1,3})?$/;
+const LABEL_GUIDE = /^[a-z0-9]+(?:[-_][a-z0-9]+){0,8}$/;
+const LOCALES = new Set(['enUS', 'enGB', 'enCN', 'enTW', 'deDE', 'esES', 'esMX', 'frFR', 'itIT', 'koKR', 'ptBR', 'ptPT', 'ruRU', 'zhCN', 'zhTW']);
+
 // Labels for a post: always discord, triage and bug, then what the report
-// and the post's forum tags say.
+// and the post's forum tags (set by the server's admins) say.
 function labelsFor(report, forumTags = []) {
 	const labels = ['discord', 'triage', 'bug'];
 	const d = report && report.details;
 	if (d) {
-		if (d.version && d.version !== 'dev') labels.push('v' + d.version);
-		if (d.guideId) labels.push('guide:' + d.guideId.split('/').pop());
-		if (d.locale && d.locale !== '?') labels.push('locale:' + d.locale);
+		if (d.version && LABEL_VERSION.test(d.version)) labels.push('v' + d.version);
+		const guide = d.guideId && d.guideId.split('/').pop();
+		if (guide && guide.length <= 44 && LABEL_GUIDE.test(guide)) labels.push('guide:' + guide);
+		if (d.locale && LOCALES.has(d.locale)) labels.push('locale:' + d.locale);
 		if (d.errors && d.errors.length) labels.push('lua-error');
 	}
 	for (const t of forumTags) {
