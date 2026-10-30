@@ -7,7 +7,7 @@
 use std::sync::LazyLock;
 
 const REPO: &str = "https://github.com/fitzforge/polestar";
-const CURSEFORGE: &str = "https://www.curseforge.com/wow/addons/polestar-guides";
+const CURSEFORGE: &str = "https://www.curseforge.com/wow/addons/polestar";
 const DISCORD: &str = "https://discord.gg/polestar";
 /// Discord's message limit for accounts without Nitro.
 pub const DISCORD_LIMIT: usize = 2000;
