@@ -31,14 +31,7 @@ fn run_in(script: &str, files: &[&str], ui: bool) -> Vec<Value> {
 	if ui {
 		stubs.push("stub_ui.lua");
 	}
-	emitted(&RunAddon {
-		stubs,
-		before: WORLD.into(),
-		addons: vec![Addon::files("Polestar", files)],
-		login: true,
-		script: [PRELUDE, script].concat(),
-		..Default::default()
-	})
+	emitted(&RunAddon { stubs, before: WORLD.into(), addons: vec![Addon::files("Polestar", files)], login: true, script: [PRELUDE, script].concat(), ..Default::default() })
 }
 
 fn run(script: &str) -> Value {
@@ -174,7 +167,8 @@ emit({
 
 #[test]
 fn the_section_one_button_row_per_character_with_an_on_click_forget_is_disabled_on_the_current_character() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 stub.advance(6)
 PolestarDB.alts.chars["Alt-Test Realm"] = { key = "Alt-Test Realm", name = "Alt", realm = "Test Realm", class = "WARRIOR", race = "Orc",
 	level = 30, xp = 100, xpMax = 5000, zone = "Barrens", bind = "Crossroads", seen = Polestar.Compat.Now() - 7200, profs = { [186] = 80 } }
@@ -190,7 +184,8 @@ local mine = { V.forgetButton():IsEnabled() }
 local mineLabel = V.forgetButton().Label:GetText()
 stub.RunScript(V.rows[2], "OnClick")
 local after = { s.selected, V.forgetButton():IsEnabled(), V.forgetButton().Label:GetText() }
-emit({ mineLabel = mineLabel, rows = rows, shownRows = s.rows, mine = mine, after = after, subtitle = s.subtitle, section = Polestar.UI.Picker.Section() })"#);
+emit({ mineLabel = mineLabel, rows = rows, shownRows = s.rows, mine = mine, after = after, subtitle = s.subtitle, section = Polestar.UI.Picker.Section() })"#,
+	);
 	assert_eq!(out["shownRows"], 2);
 	let rows = out["rows"].as_array().unwrap();
 	assert_eq!(rows.iter().map(|r| json!([r[0], r[1]])).collect::<Vec<_>>(), vec![json!(["Button", true]); 2]);
@@ -225,7 +220,8 @@ emit(PolestarDB.alts.chars["Testchar-Test Realm"].money)"#);
 
 #[test]
 fn set_sort_persists_alts_sort_and_the_order_follows_it() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 stub.advance(6)
 local now = Polestar.Compat.Now()
 PolestarDB.alts.chars["Hi-Test Realm"] = { key = "Hi-Test Realm", name = "Hi", realm = "Test Realm", class = "ROGUE", race = "Human", level = 50, xp = 0, xpMax = 9000, seen = now - 9000 }
@@ -241,7 +237,8 @@ out.setting = Polestar.Get("alts.sort")
 V.SetSort("seen")
 out.back = order()
 out.cleared = PolestarDB.settings.alts == nil or PolestarDB.settings.alts.sort == nil
-emit(out)"#);
+emit(out)"#,
+	);
 	assert_eq!(out["seen"], json!(["Testchar", "Lo", "Hi"]));
 	assert_eq!(out["level"], json!(["Testchar", "Hi", "Lo"]));
 	assert_eq!(out["saved"], "level");
@@ -252,7 +249,8 @@ emit(out)"#);
 
 #[test]
 fn the_row_text_slower_away_from_an_inn_fully_rested_max_level_nothing_for_xp_max_0_below_the_cap() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 stub.advance(6)
 local now = Polestar.Compat.Now()
 local function add(name, e)
@@ -267,7 +265,8 @@ Polestar.Fire("SHOW_ALTS")
 local V = Polestar.UI.AltsSection
 local by = {}
 for i, key in ipairs(V.Shown().keys) do by[key] = { rest = V.Shown().rested[i], pct = V.rows[i].Pct:GetText() } end
-emit(by)"#);
+emit(by)"#,
+	);
 	assert!(is_match(text(&out["Away-Test Realm"]["rest"]), r"^\+\d+% .* slower$"));
 	assert!(is_match(text(&out["Away-Test Realm"]["pct"]), r"^\d+% to 21$"));
 	assert_eq!(out["Full-Test Realm"]["rest"], "Fully rested (1.5 levels)");
@@ -278,7 +277,8 @@ emit(by)"#);
 
 #[test]
 fn forget_through_the_page_takes_two_clicks_the_first_arms_it() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 stub.advance(6)
 PolestarDB.alts.chars["Alt-Test Realm"] = { key = "Alt-Test Realm", name = "Alt", realm = "Test Realm", class = "WARRIOR", race = "Orc", level = 30, xp = 1, xpMax = 5000, seen = 5 }
 Polestar.Fire("SHOW_ALTS")
@@ -288,7 +288,8 @@ local b = V.forgetButton()
 stub.RunScript(b, "OnClick")
 local armed = { PolestarDB.alts.chars["Alt-Test Realm"] ~= nil, b.Label:GetText() }
 stub.RunScript(b, "OnClick")
-emit({ armed = armed, gone = PolestarDB.alts.chars["Alt-Test Realm"] == nil })"#);
+emit({ armed = armed, gone = PolestarDB.alts.chars["Alt-Test Realm"] == nil })"#,
+	);
 	assert_eq!(out["armed"][0], true, "still there after one click");
 	assert_eq!(out["armed"][1], "Click again to confirm");
 	assert_eq!(out["gone"], true);
@@ -334,7 +335,8 @@ emit(PolestarDB.alts.chars["Testchar-Test Realm"].money)"#,
 
 #[test]
 fn the_playing_character_alone_no_as_of_their_last_logout_the_instance_count_is_in_the_subtitle() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 Polestar.Fire("SHOW_ALTS")
 local first = Polestar.UI.AltsSection.Shown().subtitle
 Polestar.Set("maps.instances", true)
@@ -343,7 +345,8 @@ Polestar.UI.AltsSection.Select(Polestar.Alts.Key())
 local on = Polestar.UI.AltsSection.Shown().subtitle
 Polestar.Set("maps.instances", false)
 Polestar.UI.AltsSection.Select(Polestar.Alts.Key())
-emit({ first = first, on = on, off = Polestar.UI.AltsSection.Shown().subtitle })"#);
+emit({ first = first, on = on, off = Polestar.UI.AltsSection.Shown().subtitle })"#,
+	);
 	assert_eq!(out["first"], "1 character on Test Realm");
 	assert!(is_match(text(&out["on"]), r"3/5$"));
 	assert_eq!(out["off"], "1 character on Test Realm", "hidden with the instance tracker off");
@@ -351,7 +354,8 @@ emit({ first = first, on = on, off = Polestar.UI.AltsSection.Shown().subtitle })
 
 #[test]
 fn the_hub_the_sorts_are_tabs_and_the_sidebar_lists_the_characters_a_pick_selecting_its_row() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 stub.advance(6)
 PolestarDB.alts.chars["Alt-Test Realm"] = { key = "Alt-Test Realm", name = "Alt", realm = "Test Realm", class = "WARRIOR", race = "Orc", level = 30, xp = 1, xpMax = 5000, seen = 5 }
 Polestar.Fire("SHOW_ALTS")
@@ -360,7 +364,8 @@ local function labels(list) local o = {} for _, b in ipairs(list) do if b:IsShow
 local tabs, nav = labels(win.tabButtons), labels(win.navButtons)
 local V = Polestar.UI.AltsSection
 V.OnNav("Alt-Test Realm")
-emit({ tabs = tabs, nav = nav, selected = V.Shown().selected })"#);
+emit({ tabs = tabs, nav = nav, selected = V.Shown().selected })"#,
+	);
 	assert_eq!(out["tabs"], json!(["seen", "rested", "level"]));
 	assert_eq!(out["nav"], json!(["Testchar-Test Realm", "Alt-Test Realm"]));
 	assert_eq!(out["selected"], "Alt-Test Realm");
@@ -406,11 +411,13 @@ emit({ rogue = { T.ClassColor("ROGUE") }, player = { T.ClassColor() }, unknown =
 
 #[test]
 fn opening_the_page_before_the_login_write_still_lists_the_playing_character() {
-	let out = run_ui(r#"
+	let out = run_ui(
+		r#"
 local s0 = PolestarDB.alts
 Polestar.Fire("SHOW_ALTS")
 local s = Polestar.UI.AltsSection.Shown()
-emit({ had = s0 ~= nil, rows = s.rows, key = s.keys[1], subtitle = s.subtitle })"#);
+emit({ had = s0 ~= nil, rows = s.rows, key = s.keys[1], subtitle = s.subtitle })"#,
+	);
 	assert_eq!(out["had"], false);
 	assert_eq!(out["rows"], 1);
 	assert_eq!(out["key"], "Testchar-Test Realm");
