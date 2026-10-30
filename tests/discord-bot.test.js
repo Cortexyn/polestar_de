@@ -626,6 +626,22 @@ test('outside a filed #bugs thread /close asks for the issue number and changes 
 	assert.equal(github.issues[0].state, 'open');
 });
 
+test('/close and /reopen with an issue number act only on issues filed from Discord, never a pull request or another issue', async () => {
+	const { github, commands, told } = await commanded();
+	github.issues.push({ number: 2, title: 'Roadmap', body: 'plans', labels: [{ name: 'enhancement' }], state: 'open' });
+	github.issues.push({ number: 3, title: 'A PR', body: github.issues[0].body, labels: [{ name: 'discord' }], state: 'open', pull_request: {} });
+	for (const n of [2, 3]) {
+		await commands.handle(command('close', { reason: 'fixed', issue: n }));
+		assert.match(told(), /isn\u2019t a bug report filed from Discord/);
+		assert.equal(github.issues[n - 1].state, 'open');
+	}
+	github.issues[1].state = 'closed';
+	await commands.handle(command('reopen', { issue: 2 }));
+	assert.equal(github.issues[1].state, 'closed');
+	await commands.handle(command('close', { reason: 'fixed', issue: 1 }, { channel: '42' }));
+	assert.equal(github.issues[0].state, 'closed');
+});
+
 const { onPathingIssue } = require('../tools/discord-bot/lib/pathing');
 
 async function filedPost(name, content) {
