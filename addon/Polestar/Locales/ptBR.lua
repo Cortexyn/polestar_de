@@ -2012,7 +2012,7 @@ L["Feral"] = "Combate Feral"
 
 -- Maps/MinimapButton.lua
 L["Click: show or hide the guide"] = "Clique: mostrar ou ocultar o guia"
-L["Right-click: settings"] = "Clique direito: configurações"
+L["Right-click: menu"] = "Clique direito: menu"
 L["Drag: move it around the minimap"] = "Arrastar: mover ao redor do minimapa"
 
 -- UI/Gamepad.lua

@@ -1917,7 +1917,8 @@ L["There is no talent plan for your class yet."] = "Für deine Klasse gibt es no
 
 -- Maps/MinimapButton.lua
 L["Click: show or hide the guide"] = "Klick: Guide ein- oder ausblenden"
-L["Right-click: settings"] = "Rechtsklick: Einstellungen"
+L["Right-click: menu"] = "Rechtsklick: Menü"
+L["Show window"] = "Fenster anzeigen"
 L["Drag: move it around the minimap"] = "Ziehen: um die Minikarte bewegen"
 
 -- UI/Gamepad.lua

@@ -2012,7 +2012,7 @@ L["Feral"] = "野性戰鬥"
 
 -- Maps/MinimapButton.lua
 L["Click: show or hide the guide"] = "點擊：顯示或隱藏指南"
-L["Right-click: settings"] = "右鍵點擊：設定"
+L["Right-click: menu"] = "右鍵點擊：選單"
 L["Drag: move it around the minimap"] = "拖曳：沿小地圖移動"
 
 -- UI/Gamepad.lua

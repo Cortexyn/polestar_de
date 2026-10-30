@@ -2012,7 +2012,7 @@ L["Feral"] = "Сила зверя"
 
 -- Maps/MinimapButton.lua
 L["Click: show or hide the guide"] = "Щелчок: показать или скрыть гайд"
-L["Right-click: settings"] = "Правый щелчок: настройки"
+L["Right-click: menu"] = "Правый щелчок: меню"
 L["Drag: move it around the minimap"] = "Перетаскивание: перемещение вокруг миникарты"
 
 -- UI/Gamepad.lua

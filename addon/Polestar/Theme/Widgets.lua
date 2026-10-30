@@ -1225,11 +1225,25 @@ end
 
 ---------------------------------------------------------------------------
 -- Menu: one shared popup list (header menu, dropdown choices). A click
--- anywhere else closes it; Escape closes it.
+-- anywhere else closes it; Escape closes it. On the panel ground inside its
+-- hairline, 26px rows in textDim; the chosen one in the text colour with the
+-- accent check, the one under the cursor in the text colour on the hover
+-- wash. It opens with a 120ms fade and a 4px drop (reduced motion: none).
 ---------------------------------------------------------------------------
 
 local menu, catcher
-local MENU_ROW, MENU_SEP, MENU_PAD = 26, 9, 5
+local MENU_ROW, MENU_SEP, MENU_PAD = 26, 9, 4
+
+-- A row's resting colours: the item's own, else the text colour while
+-- chosen or under the cursor, textDim otherwise.
+local function paintMenuRow(row, lit)
+	local item = row.psItem
+	if not item then return end
+	local off = item.disabled and 0.45 or 1
+	local on = (lit and not item.disabled) or item.checked
+	W.Color(row.Text, item.color or (on and "text" or "textDim"), off)
+	if item.icon then W.Color(row.Icon, item.color or (on and "text" or "textDim"), off) end
+end
 
 -- Items with confirm = true need a second click: the first relabels the row
 -- and keeps the menu open.
@@ -1247,7 +1261,13 @@ local function menuRowClick(self)
 end
 
 local function menuRowEnter(self)
+	if not self.psArmed then paintMenuRow(self, true) end
 	if self.psItem and self.psItem.tip then W.Tooltip(self, "ANCHOR_RIGHT", self.psItem.text, { self.psItem.tip }) end
+end
+
+local function menuRowLeave(self)
+	if not self.psArmed then paintMenuRow(self, false) end
+	hideTip(self)
 end
 
 local function buildMenu()
@@ -1305,7 +1325,7 @@ local function menuRow(i)
 	row.Check:SetPoint("RIGHT", row, "RIGHT", -10, 0)
 	row:SetScript("OnClick", menuRowClick)
 	row:SetScript("OnEnter", menuRowEnter)
-	row:SetScript("OnLeave", hideTip)
+	row:SetScript("OnLeave", menuRowLeave)
 	menu.rows[i] = row
 	return row
 end
@@ -1342,14 +1362,13 @@ function W.ShowMenu(anchor, items, opts)
 			row.psArmed = nil
 			row.Text:SetText(item.text)
 			row.Text:SetPoint("LEFT", row, "LEFT", anyIcon and 32 or 12, 0)
-			W.Color(row.Text, item.color or "text", item.disabled and 0.45 or 1)
 			if item.icon then
 				row.Icon:SetTexture(Theme.Media(Theme.Icon(item.icon)))
-				W.Color(row.Icon, item.color or "textDim", item.disabled and 0.45 or 1)
 				row.Icon:Show()
 			else
 				row.Icon:Hide()
 			end
+			paintMenuRow(row, false)
 			row.Check:SetShown(item.checked and true or false)
 			W.Color(row.Check, "accent")
 			row:ClearAllPoints()
@@ -1937,7 +1956,9 @@ local function layoutRim(rim)
 	rim.parts[2]:SetWidth(inner)
 	rim.parts[3]:SetWidth(inner)
 	local tw = rim.psWidth or w * 0.6
-	rim.Throw:SetSize(tw, THROW_H)
+	local th = rim.psHeight or THROW_H
+	rim:SetHeight(th)
+	rim.Throw:SetSize(tw, th)
 	rim.Throw:ClearAllPoints()
 	rim.Throw:SetPoint("TOP", rim, "TOP", rim.psOffset or 0, 0)
 end
@@ -1963,23 +1984,24 @@ end
 -- children (its own frame, mouse-transparent, levels above), repainted on
 -- theme changes and hidden outside the house style or on a bare frame.
 -- opts: { width = the thrown light's width (60 % of the frame's by default),
--- offset = its centre's x from the frame's centre (0) }.
+-- offset = its centre's x from the frame's centre (0), height = how far it
+-- falls (110; less on a short window, so it stays inside) }.
 -- rim.parts: the four line segments, left to right; rim.Throw: the light.
 -- W.LayoutRim(frame) after resizing a frame whose size scripts do not run.
 function W.Rim(frame, opts)
 	opts = opts or {}
 	local rim = rawget(frame, "psRim")
 	if rim then
-		rim.psWidth, rim.psOffset = opts.width, opts.offset
+		rim.psWidth, rim.psOffset, rim.psHeight = opts.width, opts.offset, opts.height
 		paintRim(rim)
 		return rim
 	end
 	rim = CreateFrame("Frame", nil, frame)
 	rim:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
 	rim:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-	rim:SetHeight(THROW_H)
+	rim:SetHeight(opts.height or THROW_H)
 	rim:SetFrameLevel(frame:GetFrameLevel() + 30)
-	rim.psOwner, rim.psWidth, rim.psOffset = frame, opts.width, opts.offset
+	rim.psOwner, rim.psWidth, rim.psOffset, rim.psHeight = frame, opts.width, opts.offset, opts.height
 	local p = {}
 	for i = 1, 4 do
 		p[i] = rim:CreateTexture(nil, "OVERLAY", nil, 7)
@@ -2569,10 +2591,20 @@ function W.HeaderScale(f, path)
 		t.Label:SetPoint("RIGHT", s, "LEFT", -10, 0)
 		t:SetWidth(math.ceil(textWidth(t.Label)) + 10 + SCALE_TRACK + 10 + vw)
 		t:ClearAllPoints()
-		if f.Close:IsShown() then
+		-- Where the close button has left the header (the hub's details pane
+		-- holds it) the header is too narrow for it: the scale stays under
+		-- Options, Appearance, Windows.
+		local inHeader = f.Close:GetParent() == head
+		t:SetShown(inHeader or not f.Close:IsShown())
+		if f.Close:IsShown() and inHeader then
 			t:SetPoint("RIGHT", f.Close, "LEFT", -14, 0)
 		else
 			t:SetPoint("TOPRIGHT", head, "TOPRIGHT", -SHELL.pad, -16)
+		end
+		if t:IsShown() then
+			f.Title:SetPoint("TOPRIGHT", t, "TOPLEFT", -16, -16)
+		else
+			f.Title:SetPoint("TOPRIGHT", head, "TOPRIGHT", -(12 + 28 + 12), -32)
 		end
 	end
 	W.Painter(t.Track, function(tex) tex:SetHeight(3); tex:SetVertexColor(Theme.Wash("track")) end)

@@ -2012,7 +2012,7 @@ L["Feral"] = "야성"
 
 -- Maps/MinimapButton.lua
 L["Click: show or hide the guide"] = "클릭: 가이드 표시/숨기기"
-L["Right-click: settings"] = "우클릭: 설정"
+L["Right-click: menu"] = "우클릭: 메뉴"
 L["Drag: move it around the minimap"] = "드래그: 미니맵 주위로 이동"
 
 -- UI/Gamepad.lua

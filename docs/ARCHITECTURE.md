@@ -3514,11 +3514,16 @@ flight timer and the instance tracker are set under Quality of Life.
   the bottom of the minimap (`Maps/Coords.lua`, 5 Hz, repainted only when the
   tenth changes). Both use `Maps.FormatCoords`.
 - Minimap button (`maps.minimapButton`, off by default; `Maps/MinimapButton.lua`):
-  click fires `TOGGLE_FRAME`, right-click `SHOW_OPTIONS`, a drag moves it
+  click fires `TOGGLE_FRAME`, right-click opens `Maps.ShowMenu` (show or hide
+  the window, Guides, Lookup, Options, Report a problem; each fires the
+  existing event), a drag moves it
   around the minimap's edge and saves `maps.minimapButtonAngle` (degrees, 0 =
   east). A square minimap (`GetMinimapShape`) puts it on the square's edge,
   and a resized one (`OnSizeChanged`) moves it to the new edge.
-  No frame exists until the setting is first turned on.
+  No frame exists until the setting is first turned on. The addon
+  compartment (clients with `AddonCompartmentFrame`) gets the same through
+  the .toc's `AddonCompartmentFunc*` globals (`Polestar_OnAddonCompartment*`):
+  click toggles the window, right-click opens the menu, hover the tooltip.
 - Zone level ranges (`maps.zoneLevels`): labels on continent maps, and the
   hovered zone's range in the info bar. The ranges come from `forge data maps build`
   (`tools/lib/maps/zonelevels.js`). Forever-only zones (maps with Forever
