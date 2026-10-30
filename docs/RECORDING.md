@@ -188,7 +188,7 @@ Polestar Client registers once: it asks for a challenge, spends a few
 seconds of CPU on a proof of work, and receives a token, which it keeps on
 the PC. The server stores only the token's SHA-256, and calls it the
 contributor. Each network (an IPv4 address or an IPv6 /48) can register at
-most 3 times a UTC day, and every registration from one network on one day
+most 3 times a UTC day (and one IPv6 /32 at most 20 times), and every registration from one network on one day
 shares a random cohort id. The server keeps only a keyed hash of the
 network, with a salt made for that day, and deletes both when the day ends.
 
@@ -206,13 +206,15 @@ network, with a salt made for that day, and deletes both when the day ends.
 | `GET /v1/admin/contributors`, `POST /v1/admin/contributors/<hash>/block`, `/unblock` (maintainer key) | moderation. A blocked contributor's uploads are handled like anyone's but never exported or counted in the stats. |
 | `GET /healthz` | `ok` (503 when the database is stuck) |
 
-Limits: a body is at most 2 MiB and must arrive within 10 seconds; at most 4
-uploads are processed at once. An upload holds at most 256 chunks; a chunk
+Limits: a body is at most 2 MiB and must arrive within 10 seconds; at most 32
+bodies are read and 4 uploads processed at once (more get 503 and
+`Retry-After`). An upload holds at most 256 chunks; a chunk
 is at most 64 KiB of text and 4,096 records (Polestar Client skips a bigger
 chunk rather than cutting it). Records of unknown kinds are dropped from the
 stored chunk (Polestar Client leaves them out before sending); more than 64
 reject the chunk. uiMapIDs are below 100,000. 20 MiB per contributor per UTC
-day (checked before the body is read, and counted on every byte received),
+day (checked before the body is read, and counted on every byte received)
+and 60 MiB per cohort,
 30 requests per minute per contributor, 120 per network, 10 a minute on
 `/v1/register`, 10 unknown-token answers a minute per network. Requests that
 did not come through the tunnel are refused. Chunks from builds older than
