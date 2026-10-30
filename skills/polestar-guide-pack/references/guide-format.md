@@ -79,6 +79,7 @@ otherwise, the place modifiers `@x,y`, `map`, `r`, `era` / `live`.
 | `use <item> ["Name"]` | Use an item | `quest` |
 | `sethome "<Location>"` / `sethome nearest` | Bind the hearthstone at an inn (`polestar find --kind inn`) | `npc` |
 | `hearth "<Location>"` | Use the hearthstone; done on landing there | no place modifiers |
+| `die "<Graveyard>" @x,y` | A deathskip: die and take the resurrection at that graveyard's Spirit Healer (the coordinates); done back alive there. The pack then needs Polestar 0.3.0 | `@x,y` required |
 | `enter "<Place>"` | Be in that zone or area (the zone or subzone text; Polestar 0.3.0) | `@x,y` only points the arrow |
 | `getfp "<Flight point>"` | Learn a flight path (`polestar find --kind flight`) | `npc` |
 | `fly "<Town>"` | Take a flight; done on landing | no place modifiers |
@@ -154,7 +155,7 @@ unanswered, the route waits and asks; on the accept step, `!group` for a solo
 way; not on `next` or `skipto`); `!` in front of any but
 `level` and `money` turns it around. Once the route has passed the step, the
 outcome stays. A pack with `when` (on a step or a `next` line), `along` or
-`label` needs Polestar 0.2.6; with `money`, `task`, `enter`, `cast`, `abandon` or `destroy` goals, a `when money`,
+`label` needs Polestar 0.2.6; with `money`, `task`, `enter`, `cast`, `abandon`, `destroy` or `die` goals, a `when money`,
 `when dungeon`, `when upgrade`, `when done`, `when skill`, `when cooldown` or
 `when group` predicate, or `skipto`, needs Polestar 0.3.0.
 

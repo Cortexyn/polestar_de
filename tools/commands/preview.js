@@ -7,10 +7,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
 const { runAddon } = require('../../tests/helpers/lua');
 const { writeCodexPack, sampleCodex } = require('../../tests/helpers/codex');
-const { buildQuestDB, writeQuestDB } = require('../lib/questdb/build');
 const { Font } = require('../preview/font');
 const { svg, compose, TextureCache } = require('../preview/render');
 const { header } = require('../lib/generated');
@@ -320,6 +318,35 @@ function raresScene(script) {
 	return `${clientArtLua()}${RARES_SETUP}\n${script}`;
 }
 const RARES_FILES = [...FILES, 'Rares/Rares.xml'];
+// The Characters scene (panel.alts): three characters of this account, the
+// one playing live and two as of their last logout (names, places and
+// numbers are samples written for the preview).
+const ALTS_SETUP = `uistub.player.level = 18
+UnitLevel = function() return 18 end
+UnitName = function() return "Ana" end
+UnitClass = function() return "Mage", "MAGE", 8 end
+UnitRace = function() return "Night Elf", "NightElf", 4 end
+GetXPExhaustion = function() return 1840 end
+IsResting = function() return false end
+UnitXP = function() return 2480 end
+UnitXPMax = function() return 4000 end
+GetZoneText = function() return "Darkshore" end
+GetBindLocation = function() return "Auberdine" end
+GetMoney = function() return 124000 end
+local now = GetServerTime()
+local chars = PolestarDB.alts or { chars = {} }
+PolestarDB.alts = chars
+chars.chars["Bram-Test Realm"] = { key = "Bram-Test Realm", name = "Bram", realm = "Test Realm", class = "WARRIOR", race = "Dwarf", faction = "Alliance",
+	level = 31, xp = 5200, xpMax = 14600, rested = 6100, resting = true, zone = "Ironforge", bind = "Ironforge", money = 482300, seen = now - 5 * 3600,
+	profs = { [164] = 187, [186] = 201, [185] = 140 }, tabs = { { id = "g", title = "Wetlands (20-25)", step = 9, count = 40 } }, active = 1 }
+chars.chars["Cira-Test Realm"] = { key = "Cira-Test Realm", name = "Cira", realm = "Test Realm", class = "PRIEST", race = "Human", faction = "Alliance",
+	level = 9, xp = 300, xpMax = 1800, rested = 400, zone = "Westfall", bind = "Sentinel Hill", money = 12900, seen = now - 3 * 86400, profs = {} }
+Polestar.Engine.GetTabs = function() return { { guideId = "g", title = "Darkshore (16-21)", stepIndex = 16, stepCount = 43 } }, 1 end
+Polestar.Alts.Write()`;
+function altsScene(script) {
+	return `${clientArtLua()}${ALTS_SETUP}\n${script}`;
+}
+const ALTS_FILES = [...FILES, 'Alts/Alts.xml'];
 const TOAST = ['PolestarRareToast'];
 // The guide menu's sample library: pitches, pros and cons on a few guides,
 // Westfall on its real map (art with POLESTAR_CLIENT_ART), and leveling
@@ -460,6 +487,12 @@ Polestar.Set("nav.arrowColor", { 0.45, 0.7, 1 }); Polestar.Set("nav.arrowNearCol
 // The Community guides page over the real registry (uistub.realGuides in place
 // of stub_ui's fake): ours and Joe's on, Ann's with two problems, Sam's
 // too new for this Polestar, Kim's turned off in the AddOns list.
+// What the Recorder reads that the UI stub leaves out (the quest log, the
+// player, maps): the Recorder tests' world, a level 12 Night Elf, so the
+// Alliance tour's spots are listed.
+const RECORDER_PLAYER = `dofile(${JSON.stringify(path.join(ROOT, 'tests', 'lua', 'stub_recorder.lua'))})
+stub.world.level = 12
+stub.world.player.race, stub.world.player.class = "NightElf", "HUNTER"`;
 const PACKS_ADDONS = `stub.addons = {
 	{ name = "Polestar", loaded = true }, { name = "Polestar_Guides", loaded = true }, { name = "JoeRoutes", loaded = true },
 	{ name = "AnnDungeons", loaded = true }, { name = "SamProfessions", reason = "INTERFACE_VERSION" }, { name = "KimQuests", reason = "DISABLED", enabled = false },
@@ -609,8 +642,8 @@ const UNDEAD_CHOICE = routeScene('forever/horde/undead/01-tirisfal-glades', 'Tir
 ], 'Hillsbrad Foothills');
 
 // Quest markers: the real Core, Theme, Nav (Pins) and Quests modules over
-// the fixture quest database of tests/fixtures/questdb (built by `questdb
-// build` into a temporary folder, as tests/quests.test.js does), with the
+// the fixture quest database of tests/fixtures/questdb (`forge data questdb` of it, kept in
+// tests/fixtures/questdb/expected), with the
 // client world of tests/lua/stub_world.lua and stub_quests.lua. A level 4
 // Human in Elwynn Forest at the abbey, on a kill quest (7), an item quest with
 // drops, a crate and a vendor (60), an object and an exploration objective
@@ -618,14 +651,9 @@ const UNDEAD_CHOICE = routeScene('forever/horde/undead/01-tirisfal-glades', 'Tir
 // plain ground with a 10% grid and the zone name; the minimap a dark disc.
 const QUEST_FILES = ['Core/Core.xml', 'Theme/Theme.xml', 'Nav/Nav.xml', 'Quests/Quests.xml'];
 const QUEST_STUBS = ['stub_world.lua', 'stub_quests.lua'];
-let questDbDir = null;
 function questDbLua() {
-	if (!questDbDir) {
-		questDbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'polestar-preview-questdb-'));
-		writeQuestDB(buildQuestDB({ dataDir: path.join(ROOT, 'tests', 'fixtures', 'questdb') }), questDbDir);
-		process.on('exit', () => fs.rmSync(questDbDir, { recursive: true, force: true }));
-	}
-	const files = ['MapFrames.lua', 'Quests.lua', 'Npcs.lua', 'Objects.lua', 'Items.lua'].map((f) => JSON.stringify(path.join(questDbDir, f)));
+	const dir = path.join(ROOT, 'tests', 'fixtures', 'questdb', 'expected');
+	const files = ['MapFrames.lua', 'Quests.lua', 'Npcs.lua', 'Objects.lua', 'Items.lua'].map((f) => JSON.stringify(path.join(dir, f)));
 	return `stub.quests.dbFiles = { ${files.join(', ')} }`;
 }
 const MAP_W = 700, MAP_H = 470;
@@ -1178,6 +1206,19 @@ end`,
 		],
 	},
 	{
+		file: 'recorder-window.svg',
+		title: 'The Recorder window (/psrec ui) in Polestar\'s look: a trail running on the next spot of the tour, one spot done, this session\'s trails',
+		panels: [
+			{ roots: ['PolestarRecorderPanel'], addons: ['Polestar_Recorder'], before: RECORDER_PLAYER, script: `PolestarRecorder_Command("on")
+				PolestarRecorder_Command("ui")
+				PolestarRecorder_Command("trail on #11 Teldrassil Darnassus gate")
+				stub.advance(95)
+				PolestarRecorder_Command("trail off")
+				PolestarRecorder_Command("trail toggle")
+				stub.advance(42)` },
+		],
+	},
+	{
 		file: 'options-thanks.svg',
 		title: 'Options: Guiding Stars, with sample supporters; "Special thanks to" in the header leads here',
 		panels: [
@@ -1516,6 +1557,14 @@ local r = b.Chains[1]; r:GetScript("OnEnter")(r)`) },
 		],
 	},
 	{
+		file: 'characters.svg',
+		title: 'Characters in the hub: three characters on one realm, the one playing first with its guide, each other as of its last logout with rested XP projected to now, one sidebar entry each; the sort tabs on last played, then most rested',
+		panels: [
+			{ files: ALTS_FILES, roots: PICKER, script: altsScene('Polestar.Fire("SHOW_ALTS")') },
+			{ files: ALTS_FILES, roots: PICKER, script: altsScene('Polestar.Set("alts.sort", "rested"); Polestar.Fire("SHOW_ALTS")') },
+		],
+	},
+	{
 		file: 'rares-toast.svg',
 		title: 'The rare alert over the world: a rare on the minimap at its distance; a rare elite in sight; a treasure',
 		backdrop: 'terrain',
@@ -1528,7 +1577,8 @@ local r = b.Chains[1]; r:GetScript("OnEnter")(r)`) },
 ];
 
 // panel.stubs / panel.files: other client stubs and manifests than the UI's
-// (stub_ui.lua's fake Engine and guides, installed after load).
+// (stub_ui.lua's fake Engine and guides, installed after load); panel.addons:
+// addons loaded after Polestar (the Recorder).
 function dumpPanel(panel, prelude) {
 	const before = [prelude, `dofile(${JSON.stringify(path.join(ROOT, 'tools', 'preview', 'stub.lua'))})`];
 	before.push(clientUiArtLua());
@@ -1541,7 +1591,7 @@ function dumpPanel(panel, prelude) {
 	const { emitted } = runAddon({
 		stubs: panel.stubs || ['stub_ui.lua'],
 		before: before.join('\n'),
-		addons: [{ name: 'Polestar', files: panel.files || FILES }],
+		addons: [{ name: 'Polestar', files: panel.files || FILES }, ...(panel.addons || [])],
 		script: `${panel.stubs ? '' : 'uistub.install()\n'}stub.login()\n${panel.script}\nstub.advance(1)\npreview.emit()`,
 	});
 	const dump = emitted[emitted.length - 1];

@@ -53,7 +53,7 @@
 //                (or MapDifficulty's); max: the highest boss level, at most 60.
 //   entrance     best evidence first: a recorded entrance (Recorder `enter`,
 //                the most-seen one), else the curated table
-//                (tools/lib/codex/entrances.json: the point on the zone map
+//                (data/codex/entrances.json: the point on the zone map
 //                where one walks in, each with its public source), else a
 //                guide's `goto x,y "<instance name> ..."` line, else the map's
 //                Corpse point (where a ghost comes back: near, not at, the way
@@ -207,7 +207,7 @@ function curatedEntrances(dir) {
 }
 
 // The curated entrance table (entrances.json), by instance key.
-function loadEntranceTable(file = path.join(__dirname, 'entrances.json')) {
+function loadEntranceTable(file = path.join(__dirname, '..', '..', '..', 'data', 'codex', 'entrances.json')) {
 	if (!fs.existsSync(file)) return {};
 	const out = {};
 	for (const e of JSON.parse(fs.readFileSync(file, 'utf8')).entrances || []) out[e.key] = e;
@@ -218,7 +218,15 @@ function loadEntranceTable(file = path.join(__dirname, 'entrances.json')) {
 // Recorder entrances [ { map, x, y, f?, n } ]; table: its entrances.json entry
 // or null; guides: curatedEntrances(); corpse: the Map row's { c, x, y } |
 // null; prefer: uiMap ids of the zones holding it (for the corpse point).
-function chooseEntrance({ name, recorded = [], table = null, guides = [], corpse = null, zones = {}, frames = {}, prefer = [] }) {
+// A table entry's `A` (the Alliance's own way in) rides along as entrance.A.
+function chooseEntrance(args) {
+	const e = chooseEntrancePoint(args);
+	const a = args.table && args.table.A;
+	if (!e || !(a && a.map)) return e;
+	return { ...e, A: { map: Number(a.map), x: round1(a.x), y: round1(a.y) } };
+}
+
+function chooseEntrancePoint({ name, recorded = [], table = null, guides = [], corpse = null, zones = {}, frames = {}, prefer = [] }) {
 	const rec = recorded.slice().sort((a, b) => num(b.n) - num(a.n))[0];
 	if (rec && rec.map) return { map: Number(rec.map), x: round1(rec.x), y: round1(rec.y), f: rec.f === 'e' ? 'e' : null };
 	if (table && table.map) return { map: Number(table.map), x: round1(table.x), y: round1(table.y), f: null };
@@ -260,7 +268,7 @@ function buildInstances(facts, ctx = {}) {
 	// Forever's `commondrop` rows of an NPC: the world-drop pool it shares
 	// (books, world blues, gems), not its own loot table.
 	const whCommon = new Set(); // `${npc}|${item}`
-	for (const [npc, w] of Object.entries((ctx.wowhead && ctx.wowhead.npc) || {})) for (const d of w.drops || []) if (d.common) whCommon.add(`${npc}|${d.item}`);
+	for (const [npc, w] of Object.entries((ctx.web && ctx.web.npc) || {})) for (const d of w.drops || []) if (d.common) whCommon.add(`${npc}|${d.item}`);
 	const lootOf = {}; // npc -> [[item, chance, common]]
 	for (const [id, it] of Object.entries(itemsIn)) {
 		for (const [npc, chance] of Object.entries((it.drops && it.drops.npc) || {})) {
@@ -275,7 +283,7 @@ function buildInstances(facts, ctx = {}) {
 	// table at any rate (a boss's recipes and rare pieces drop well under 1%:
 	// Thermaplugg's schematics, Dextren Ward's plans), the world-drop pool at
 	// MIN_LOOT% or more.
-	for (const [npc, w] of Object.entries((ctx.wowhead && ctx.wowhead.npc) || {})) {
+	for (const [npc, w] of Object.entries((ctx.web && ctx.web.npc) || {})) {
 		for (const d of w.drops || []) {
 			const c = Math.round((d.count / d.outof) * 10000) / 100;
 			if (!d.common || c >= MIN_LOOT) (lootOf[npc] = lootOf[npc] || []).push([d.item, c, d.common]);
@@ -284,7 +292,7 @@ function buildInstances(facts, ctx = {}) {
 	// item -> npcs dropping it (any rate): an item one NPC alone drops is its own loot.
 	const droppers = {};
 	for (const [id, it] of Object.entries(itemsIn)) for (const npc of Object.keys((it.drops && it.drops.npc) || {})) (droppers[id] = droppers[id] || new Set()).add(Number(npc));
-	for (const [npc, w] of Object.entries((ctx.wowhead && ctx.wowhead.npc) || {})) for (const d of w.drops || []) if (!d.common) (droppers[d.item] = droppers[d.item] || new Set()).add(Number(npc));
+	for (const [npc, w] of Object.entries((ctx.web && ctx.web.npc) || {})) for (const d of w.drops || []) if (!d.common) (droppers[d.item] = droppers[d.item] || new Set()).add(Number(npc));
 	// A boss's items from its [item, chance, common] rows: the best chance per
 	// item; its own table first (items no row puts in Forever's world-drop
 	// pool, so Onyxia's Sacks of Gems are not crowded out by world blues), then
@@ -306,8 +314,8 @@ function buildInstances(facts, ctx = {}) {
 	};
 	const quality = ctx.quality || (() => null);
 	const objectsIn = ctx.objects || {};
-	const whNpc = (ctx.wowhead && ctx.wowhead.npc) || {};
-	const whObject = (ctx.wowhead && ctx.wowhead.object) || {};
+	const whNpc = (ctx.web && ctx.web.npc) || {};
+	const whObject = (ctx.web && ctx.web.object) || {};
 	// Objects: [item, chance] rows (items.json, Forever's data), and who else yields
 	// an item (npcs by id, objects by name: one chest has several ids).
 	const objLootOf = {};
