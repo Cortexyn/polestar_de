@@ -904,7 +904,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "Ouvre 
 L["Opens the inner doors of Dire Maul's North and West wings."] = "Ouvre les portes intérieures des ailes Nord et Ouest de Hache-Tripes."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "Ouvre la porte arrière de Gnomeregan, l'entrée de l'Atelier."
 L["Opens the doors of the Armory and the Cathedral."] = "Ouvre les portes de l'Armurerie et de la Cathédrale."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Ouvre la porte du chemin de la Horde vers la cité de Dalaran ; une clé l'ouvre pour tout le groupe. L'Alliance y est envoyée par l'Image de l'archimage Modera."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- UI/UI.lua
 L["Map %d"] = "Carte %d"
@@ -1809,6 +1809,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 -- L["Map icons"] = ""
 -- L["Icon pack"] = ""
 -- L["The medallion under every mark on the world map and the minimap. The skin's: Polestar's, Halo's, or Hearth's for Hearth and the game's own looks. Glyphs only: no medallion."] = ""
@@ -2335,6 +2336,7 @@ L["This import string holds too much: Polestar reads up to %d KB of guide data."
 -- L["Removed imported guide %s."] = ""
 -- L["No imported guide with id %s."] = ""
 -- L["Open the Import page; import clear / import delete <id>: remove imports"] = ""
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "par %s"
@@ -2549,6 +2551,36 @@ L["on GitHub"] = "sur GitHub"
 L["Thank you for making Polestar possible."] = "Merci de rendre Polestar possible."
 L["No names here yet."] = "Aucun nom pour l'instant."
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["Alliance"] = "Alliance"
 -- L["Blood Elf"] = "Elfe de sang"
@@ -2624,3 +2656,4 @@ L["No names here yet."] = "Aucun nom pour l'instant."
 -- L["Character"] = "Personnage"
 -- L["Session"] = "Session"
 -- L["Counts and the current session in chat."] = "Compteurs et session en cours dans la discussion."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "Ouvre la porte du chemin de la Horde vers la cité de Dalaran ; une clé l'ouvre pour tout le groupe. L'Alliance y est envoyée par l'Image de l'archimage Modera."

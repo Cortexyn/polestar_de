@@ -903,7 +903,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "스트
 L["Opens the inner doors of Dire Maul's North and West wings."] = "혈투의 전장 북부 및 서부 구역의 안쪽 문을 엽니다."
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "놈리건의 뒷문인 작업장 입구를 엽니다."
 L["Opens the doors of the Armory and the Cathedral."] = "무기고와 대성당의 문을 엽니다."
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "호드가 달라란 도시로 들어가는 길의 문을 엽니다. 열쇠 하나로 파티 전체에 열립니다. 얼라이언스는 대마법사 모데라의 환영이 들여보내 줍니다."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- UI/UI.lua
 L["Map %d"] = "지도 %d"
@@ -1808,6 +1808,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 -- L["Map icons"] = ""
 -- L["Icon pack"] = ""
 -- L["The medallion under every mark on the world map and the minimap. The skin's: Polestar's, Halo's, or Hearth's for Hearth and the game's own looks. Glyphs only: no medallion."] = ""
@@ -2334,6 +2335,7 @@ L["Usage: /polestar import delete <guide-id>"] = "사용법: /polestar import de
 L["Removed imported guide %s."] = "가져온 가이드 %s 삭제했습니다."
 L["No imported guide with id %s."] = "ID가 %s인 가져온 가이드가 없습니다."
 L["Open the Import page; import clear / import delete <id>: remove imports"] = "가져오기 페이지 열기; import clear / import delete <ID>: 가져온 항목 삭제"
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "작성자 %s"
@@ -2548,6 +2550,36 @@ L["on GitHub"] = "GitHub"
 L["Thank you for making Polestar possible."] = "Polestar를 가능하게 해 주셔서 감사합니다."
 L["No names here yet."] = "아직 이름이 없습니다."
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Arrow & routes) to use Polestar's arrow."] = "Shortest Path Forever가 가이드 중입니다. Polestar 화살표를 쓰려면 \"설치 시 Shortest Path Forever로 가이드\"를 끄십시오(설정, 화살표 및 경로)."
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Integrations) to use Polestar's arrow."] = "Shortest Path Forever가 안내 중입니다. Polestar의 화살표를 사용하려면 \"설치 시 Shortest Path Forever로 가이드\"(옵션, 연동)를 끄세요."
@@ -2584,3 +2616,4 @@ L["No names here yet."] = "아직 이름이 없습니다."
 -- L["Character"] = "캐릭터"
 -- L["Session"] = "세션"
 -- L["Counts and the current session in chat."] = "대화창에 수치와 현재 세션."
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "호드가 달라란 도시로 들어가는 길의 문을 엽니다. 열쇠 하나로 파티 전체에 열립니다. 얼라이언스는 대마법사 모데라의 환영이 들여보내 줍니다."

@@ -903,7 +903,7 @@ L["Opens the Eastwall Gate into Stratholme's Scourge-held districts."] = "打开
 L["Opens the inner doors of Dire Maul's North and West wings."] = "打开厄运之槌北区和西区的内门。"
 L["Opens Gnomeregan's back door, the Workshop entrance."] = "打开诺莫瑞根的后门，即车间入口。"
 L["Opens the doors of the Armory and the Cathedral."] = "打开军械库和大教堂的门。"
-L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "打开部落进入达拉然城之路上的大门；一把钥匙即可为整个队伍开门。联盟由大法师莫德拉的影像送入。"
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance walks in through the sewer pipe in Cantrips & Crows."] = ""
 
 -- UI/UI.lua
 L["Map %d"] = "地图 %d"
@@ -1808,6 +1808,7 @@ L["Position trails, marks and the list of spots to walk, in a small window."] = 
 -- L["Last uploaded chunk"] = ""
 -- L["Recordings"] = ""
 -- L["Chunks waiting, the last upload and the install id, in chat."] = ""
+-- L["Characters"] = ""
 -- L["Map icons"] = ""
 -- L["Icon pack"] = ""
 -- L["The medallion under every mark on the world map and the minimap. The skin's: Polestar's, Halo's, or Hearth's for Hearth and the game's own looks. Glyphs only: no medallion."] = ""
@@ -2334,6 +2335,7 @@ L["Usage: /polestar import delete <guide-id>"] = "用法：/polestar import dele
 L["Removed imported guide %s."] = "已移除导入指南 %s。"
 L["No imported guide with id %s."] = "没有 ID 为 %s 的导入指南。"
 L["Open the Import page; import clear / import delete <id>: remove imports"] = "打开导入页面；import clear / import delete <ID>：移除导入内容"
+-- L["Its guide has %d entries in %s; an import string holds %d there at most."] = ""
 
 -- UI/Import.lua
 L["by %s"] = "作者 %s"
@@ -2548,6 +2550,36 @@ L["on GitHub"] = "GitHub"
 L["Thank you for making Polestar possible."] = "感谢你们让 Polestar 成为可能。"
 L["No names here yet."] = "暂无名单。"
 
+-- Alts/Snapshot.lua
+-- L["Show your characters"] = ""
+
+-- Alts/Options.lua
+-- L["Keep a note of each character you play, for the Characters page (/pole alts)."] = ""
+
+-- Alts/View.lua
+-- L["Last played"] = ""
+-- L["Most rested"] = ""
+-- L["None yet"] = ""
+-- L["Gold"] = ""
+-- L["Fully rested (%s levels)"] = ""
+-- L["+%d%% · not at an inn, slower"] = ""
+-- L["+%s rested"] = ""
+-- L["Playing"] = ""
+-- L["Level %d %s %s"] = ""
+-- L["Playing now"] = ""
+-- L["Last played %s"] = ""
+-- L["Max level"] = ""
+-- L["%d%% to %d"] = ""
+-- L["Rested, projected to now"] = ""
+-- L["No characters yet."] = ""
+-- L["Turned off: showing what was saved"] = ""
+-- L["%d characters on %d realms · each as of their last logout"] = ""
+-- L["1 character on %s"] = ""
+-- L["1 character on %s · each as of their last logout"] = ""
+-- L["%d characters on %s · each as of their last logout"] = ""
+-- L["Characters is turned off. Turn it on under Options > Discovery > Characters."] = ""
+-- L["Forget %s"] = ""
+
 -- No longer in the code (its English changed or it went away): reuse or delete.
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Arrow & routes) to use Polestar's arrow."] = "Shortest Path Forever 正在导航。要使用 Polestar 的箭头，请关闭“安装 Shortest Path Forever 时由其导航”（选项 > 箭头与路线）。"
 -- L["Shortest Path Forever is guiding. Turn off \"Guide with Shortest Path Forever when it's installed\" (Options, Integrations) to use Polestar's arrow."] = "Shortest Path Forever 正在导航。要使用 Polestar 的箭头，请关闭\"安装 Shortest Path Forever 时由其导航\"（选项，整合）。"
@@ -2584,3 +2616,4 @@ L["No names here yet."] = "暂无名单。"
 -- L["Character"] = "角色"
 -- L["Session"] = "会话"
 -- L["Counts and the current session in chat."] = "在聊天中显示计数和当前会话。"
+-- L["Opens the gate of the Horde's way into the City of Dalaran; one key opens it for the group. The Alliance is sent in by the Image of Archmage Modera."] = "打开部落进入达拉然城之路上的大门；一把钥匙即可为整个队伍开门。联盟由大法师莫德拉的影像送入。"
