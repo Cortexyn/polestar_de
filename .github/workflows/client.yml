@@ -270,14 +270,26 @@ jobs:
               "darwin-aarch64": $mac, "darwin-x86_64": $mac, "darwin-aarch64-app": $mac, "darwin-x86_64-app": $mac}}' > out/latest.json
           cat out/latest.json
 
+      # The notes are apps/client/release/notes/<version>.md, written with the release.
+      - name: Release notes
+        run: |
+          notes="apps/client/release/notes/${GITHUB_REF_NAME#client-v}.md"
+          [ -f "$notes" ] || { echo "::error::write $notes before tagging"; exit 1; }
+          cp "$notes" notes.md
+
+      # Every installer checked on VirusTotal (hash lookup first; the key is a free one shared
+      # with polestar.guide), and the reports linked at the end of the notes. Skipped without a key.
+      - name: Virus scans
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          if [ -z "$VT_API_KEY" ]; then echo "::notice::No VT_API_KEY: no virus scan links in the notes."; exit 0; fi
+          { echo; bash apps/client/release/virustotal.sh out; } >> notes.md
+
       - name: Draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${GITHUB_REF_NAME#client-v}"
           gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --latest=false \
-            --title "Polestar Client $version (beta)" \
-            --notes "Polestar Client $version (beta): installs and updates Polestar's addons and community guides from polestar.guide, and, if you turn recording on, sends what the Polestar Recorder logs.
-          Downloads: Windows (x64: -setup.exe or .msi; Arm: arm64-setup.exe), macOS (universal .dmg, Apple silicon and Intel), Linux (x64 and arm64: .AppImage or .deb).
-          More: https://polestar.guide/client
-          What recording collects and what it never does: https://github.com/fitzforge/polestar/blob/next/docs/RECORDING.md"
+            --title "Polestar Client $version (beta)" --notes-file notes.md
