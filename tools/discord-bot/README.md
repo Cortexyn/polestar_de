@@ -93,16 +93,22 @@ other issues or carry HTML. Say so in the #bugs guidelines, for example:
 
 ### 2. GitHub
 
-1. A [fine-grained token](https://github.com/settings/personal-access-tokens/new),
-   repository `fitzforge/polestar` only, permissions **Issues: Read and
-   write** and **Contents: Read and write** (the screenshots branch). That is
-   the bot's `GITHUB_TOKEN`.
+1. A [fine-grained token](https://github.com/settings/personal-access-tokens/new)
+   (or a GitHub App installation), repository `fitzforge/polestar` only,
+   permission **Issues: Read and write** and nothing else. That is the bot's
+   `GITHUB_TOKEN`. Give it no Contents permission: Contents write on this
+   repository can push branches and replace release assets.
 
-   Contents write on this repository can push to any branch, `main`
-   included, and `main` has no protection. To keep that out of the bot's
-   hands, make a public `fitzforge/polestar-bug-media` repository, give the
-   bot a second token with Contents on that one alone, and set `MEDIA_REPO`
-   and `MEDIA_TOKEN`; the first token then needs Issues only.
+   Screenshots go to a separate public repository, `fitzforge/polestar-bug-media`
+   (create it empty). Make a second fine-grained token with **Contents: Read
+   and write** on that repository alone and set `MEDIA_REPO` and
+   `MEDIA_TOKEN`. Without them the bot falls back to `GITHUB_REPO` and
+   `GITHUB_TOKEN` (which then needs Contents on the main repository) and logs
+   a warning on every start.
+
+   Set `BOT_GITHUB_LOGIN` to the account the token acts as (an App's is
+   `name[bot]`), in `.env` and as an Actions variable: only issues that
+   account opened are then tied to a Discord thread.
 2. In the repository's Settings, Secrets and variables, Actions: the secret
    `DISCORD_TOKEN` (the same bot token) and the variable `DISCORD_FORUM_ID`;
    for release candidates, the variables `DISCORD_TESTERS_CHANNEL_ID` and
