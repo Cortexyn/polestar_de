@@ -1337,6 +1337,33 @@ fn buying_buys_what_the_open_buy_goals_still_need_from_this_merchant_after_the_i
 }
 
 #[test]
+fn buying_spends_nothing_for_an_imported_or_community_guide_and_names_what_to_buy_instead() {
+	for pack in ["imported", "yendi"] {
+		let out = run(&[
+			GOODS,
+			format!(
+				r#"
+		set("buyGoals", true)
+		q.money = 1000
+		q.guidePack = "{pack}"
+		q.step({{ {{ t = "buy", item = 20, count = 3, itemName = "Soothing Spices" }} }})
+		q.openMerchant()
+		stub.advance(1)
+		emit(#bought())
+		emit(q.money)
+		emit(printed("Left 3 Soothing Spices %(.+%) for you to buy"))
+	"#
+			)
+			.as_str(),
+		]
+		.concat());
+		assert_eq!(out[0], 0, "{pack}: nothing bought");
+		assert_eq!(out[1], 1000, "{pack}: no money spent");
+		assert_eq!(out[2], true, "{pack}: says what to buy");
+	}
+}
+
+#[test]
 fn buying_a_purchase_still_on_its_way_counts_so_opening_the_merchant_again_before_it_lands_buys_nothing_more() {
 	let out = run(&[
 		GOODS,
