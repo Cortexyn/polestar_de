@@ -12,11 +12,11 @@
 
 <p align="center">
   <a href="https://github.com/fitzforge/polestar/releases"><img src="docs/assets/download.svg" height="48" alt="Download Polestar"></a>
-  <a href="https://www.curseforge.com/wow/addons/polestar-guides"><img src="docs/assets/curseforge.svg" height="48" alt="Get it on CurseForge"></a>
+  <a href="https://www.curseforge.com/wow/addons/polestar"><img src="docs/assets/curseforge.svg" height="48" alt="Get it on CurseForge"></a>
 </p>
 
 <p align="center">
-  On <a href="https://www.curseforge.com/wow/addons/polestar-guides"><b>CurseForge</b></a>, or from the Releases page. Questions, feedback and bug reports: join the <a href="https://discord.gg/polestar"><b>Polestar Discord</b></a>.
+  On <a href="https://www.curseforge.com/wow/addons/polestar"><b>CurseForge</b></a>, or from the Releases page. Questions, feedback and bug reports: join the <a href="https://discord.gg/polestar"><b>Polestar Discord</b></a>.
   Polestar is free; if it saves you a few hours, you can <a href="https://ko-fi.com/0xfitz"><b>buy me a coffee</b></a>.
 </p>
 
@@ -26,7 +26,7 @@
   <img alt="Version 0.2.6, beta" src="https://img.shields.io/badge/version-0.2.6_beta-fabf4d?style=flat-square&labelColor=232a3f">
   <a href="https://github.com/fitzforge/polestar/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fitzforge/polestar/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://discord.gg/polestar"><img alt="Discord: join the Polestar community" src="https://img.shields.io/badge/Discord-join_us-5865f2?style=flat-square&logo=discord&logoColor=white&labelColor=232a3f"></a>
-  <a href="https://www.curseforge.com/wow/addons/polestar-guides"><img alt="CurseForge: Polestar Guides" src="https://img.shields.io/badge/CurseForge-Polestar_Guides-f16436?style=flat-square&logo=curseforge&logoColor=white&labelColor=232a3f"></a>
+  <a href="https://www.curseforge.com/wow/addons/polestar"><img alt="CurseForge: Polestar Guides" src="https://img.shields.io/badge/CurseForge-Polestar_Guides-f16436?style=flat-square&logo=curseforge&logoColor=white&labelColor=232a3f"></a>
   <a href="https://ko-fi.com/0xfitz"><img alt="Ko-fi: buy me a coffee" src="https://img.shields.io/badge/Ko--fi-buy_me_a_coffee-ff5e5b?style=flat-square&logo=kofi&logoColor=white&labelColor=232a3f"></a>
 </p>
 
@@ -54,7 +54,7 @@
 ## Quick start
 
 1. **Install it with the CurseForge app** (search for
-   [Polestar Guides](https://www.curseforge.com/wow/addons/polestar-guides)),
+   [Polestar Guides](https://www.curseforge.com/wow/addons/polestar)),
    then skip to step 3. **Or download** `Polestar-<version>.zip` from the
    newest release on the
    [Releases page](https://github.com/fitzforge/polestar/releases), under

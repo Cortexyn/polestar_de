@@ -34,8 +34,8 @@ Free, open-source guides for World of Warcraft: Forever: leveling routes for eve
 
 ## Project settings
 
-- [ ] **Name:** Polestar Guides (live at https://www.curseforge.com/wow/addons/polestar-guides)
-- [ ] **Slug:** `polestar-guides`
+- [ ] **Name:** Polestar Guides (live at https://www.curseforge.com/wow/addons/polestar)
+- [ ] **Slug:** `polestar`
 - [ ] **Summary:** the text above
 - [ ] **Description:** [description.md](description.md), pasted whole, editor in Markdown mode
 - [ ] **Avatar:** `images/logo-400.png` (CurseForge asks for 400x400 pixels; `images/logo-1024.png` is the large copy)
