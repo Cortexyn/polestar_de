@@ -2711,5 +2711,39 @@
 			"ref": "quest_template_addon PrevQuestID"
 		},
 		"note": "The second Rear Guard Patrol (Tirisfal, Deathguard Linnea) comes after the first, Rear Guard Patrol 356. QuestieDB has no prerequisite."
+	},
+	"99191": {
+		"set": {
+			"objectives": [
+				{
+					"type": "item",
+					"id": 2592,
+					"count": 60,
+					"text": "Wool Cloth"
+				}
+			]
+		},
+		"source": {
+			"kind": "tdb",
+			"ref": "quest_objectives (sniffed): item 2592 x60"
+		},
+		"note": "A Donation of Wool (High Order, Belanaa Windveil in Dalaran) asks for 60 Wool Cloth, like the capitals' donations; the merged data had no count."
+	},
+	"99196": {
+		"set": {
+			"objectives": [
+				{
+					"type": "item",
+					"id": 2592,
+					"count": 60,
+					"text": "Wool Cloth"
+				}
+			]
+		},
+		"source": {
+			"kind": "tdb",
+			"ref": "quest_objectives (sniffed): item 2592 x60"
+		},
+		"note": "A Donation of Wool (Windshapers, Oura Stormspinner by Thunder Bluff) asks for 60 Wool Cloth, like the capitals' donations; the merged data had no count."
 	}
 }

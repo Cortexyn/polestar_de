@@ -191,11 +191,17 @@ end
 -- places the arrow does not pick by itself) }, ... }, nil without spots or a map frame.
 -- A region narrower than REGION_SMALL yards is an 8-gon (a handful of pixels
 -- on the world map), the others REGION_SIDES-gons.
+-- REGION_WORK caps the spot pairs one goal's grouping compares (the sweep and
+-- the joins together); the sweep of the busiest built-in goal (438 spots)
+-- compares about 11,000. A goal past it, only a crafted guide (an import
+-- string), draws no regions instead of freezing the game on a quadratic
+-- grouping.
 local REGION_SIDES, REGION_SMALL = 16, 200
 local REGION_LINK = 90
 local REGION_MAX_SPAN = 700
 local REGION_PAD = 10
 local REGION_MIN_RADIUS = 15
+local REGION_WORK = 50000
 local regionCache = setmetatable({}, { __mode = "k" })
 local sides = {}
 for _, k in ipairs({ 8, REGION_SIDES }) do
@@ -244,6 +250,12 @@ end
 local function regionsOf(goal)
 	local cached = regionCache[goal]
 	if cached ~= nil then return cached or nil end
+	local work = 0
+	local function tooMuch()
+		regionCache[goal] = false
+		ns.Debug("spawn regions: a goal's", #goal.spots, "spots are too many to group; no regions drawn")
+		return nil
+	end
 	local C = ns.Compat
 	local spots = goal.spots
 	if not (C and C.MapToWorld and type(spots) == "table" and goal.map) then return nil end
@@ -280,6 +292,8 @@ local function regionsOf(goal)
 		for b = a + 1, n do
 			local j = order[b]
 			if xs[j] - xs[i] > reach then break end
+			work = work + 1
+			if work > REGION_WORK then return tooMuch() end
 			if cs[i] == cs[j] then
 				local gap = across(i, j) - 2 * (rs[i] + rs[j])
 				if gap <= REGION_LINK then
@@ -303,6 +317,8 @@ local function regionsOf(goal)
 			local s = math.max(span[a], span[b])
 			for _, i in ipairs(members[a]) do
 				for _, j in ipairs(members[b]) do
+					work = work + 1
+					if work > REGION_WORK then return tooMuch() end
 					local d = across(i, j)
 					if d > s then s = d end
 				end
