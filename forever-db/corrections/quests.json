@@ -2241,8 +2241,8 @@
 			]
 		},
 		"source": {
-			"kind": "in-game-check",
-			"ref": "#727: the quest log asks for 12 Copper Bars and 4 Toughened Boar Hides"
+			"kind": "eg",
+			"ref": "players' caches (EG Link): objectives Copper Bar 2840 x12, then Toughened Boar Hide 267416 x4"
 		},
 		"note": "The Quarry's Smith (Dun Morogh, blacksmiths) asks for 12 Copper Bars, then 4 Toughened Boar Hides, so the hide is objective 2. The merged data listed only the hide, so `quest 95217.1` named it. Found by TP1186 in #727."
 	},
