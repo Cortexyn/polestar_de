@@ -28,9 +28,13 @@ echo "Every download was checked on [VirusTotal](https://www.virustotal.com) whe
 echo
 echo "| File | SHA-256 | Report |"
 echo "|---|---|---|"
+json="$dir/virustotal.json" # for polestar.guide: each installer's hash and report, attached to the release
+echo '[]' > "$json"
 for f in "${files[@]}"; do
 	name="$(basename "$f")"
 	sha="$(sha256sum "$f" | cut -d' ' -f1)"
+	jq --arg file "$name" --arg sha256 "$sha" --arg report "https://www.virustotal.com/gui/file/$sha" \
+		'. + [{file: $file, sha256: $sha256, report: $report}]' "$json" > "$json.tmp" && mv "$json.tmp" "$json"
 	known="$(vt -o /dev/null -w '%{http_code}' "$api/files/$sha")"
 	if [ "$known" = 404 ]; then
 		url="$api/files"
