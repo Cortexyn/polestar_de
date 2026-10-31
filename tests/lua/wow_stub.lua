@@ -168,7 +168,12 @@ function Methods.SetPoint(self, point, rel, relPoint, x, y)
 	if type(rel) == "number" then rel, relPoint, x, y = nil, nil, rel, relPoint end
 	if type(rel) == "string" then rel = _G[rel] end
 	if rel ~= nil and type(relPoint) ~= "string" then relPoint, x, y = point, relPoint, x end
-	table.insert(self.points, { point = point, rel = rel, relPoint = relPoint or point, x = x or 0, y = y or 0 })
+	-- As in the game, setting a point the frame already has moves that anchor.
+	local anchor = { point = point, rel = rel, relPoint = relPoint or point, x = x or 0, y = y or 0 }
+	for i, p in ipairs(self.points) do
+		if p.point == point then self.points[i] = anchor; return end
+	end
+	table.insert(self.points, anchor)
 end
 function Methods.SetAllPoints(self, other)
 	other = other or self.parent
@@ -206,6 +211,7 @@ function Methods.SetMovable(self, v) self.movable = v and true or false end
 function Methods.IsMovable(self) return self.movable == true end
 function Methods.SetResizable(self, v) self.resizable = v and true or false end
 function Methods.IsResizable(self) return self.resizable == true end
+function Methods.SetResizeBounds(self, minW, minH, maxW, maxH) self.resizeBounds = { minW, minH, maxW, maxH } end
 function Methods.StartMoving(self) self.moving = true end
 function Methods.StartSizing(self) self.sizing = true end
 function Methods.StopMovingOrSizing(self) self.moving, self.sizing = false, false end

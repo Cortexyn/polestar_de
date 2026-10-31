@@ -38,9 +38,11 @@
 //              q quest quest,choice        g gift npc,spell (an NPC hands it out)   c craft spell,skillLine,skill
 //              r rep faction,standing,npc  p pvp rank,npc               n container item,chance
 //              w world minLevel,maxLevel
-//   npc      level;levelMax;faction;flags(r e b);instance;roles;loot;<spawns>...
+//   npc      level;levelMax;faction;flags(r e b);instance;roles;loot;<spawns>...[;t<subName>]
 //            spawns = map,f,x,y,x,y...   (one group per map); loot = item,item,...
-//   object   treasure(1|empty);loot;<spawns>...
+//   object   treasure(1|empty);loot;<spawns>...[;m<faction>]
+//            t/m tails contain no commas, so older spawn readers skip them.
+//            m marks a mailbox; faction is A/H/AH, or empty when unknown/hostile.
 //   quest    level;minLevel;faction;races;classes;zone;startNpc;startObject;startItem;
 //            endNpc;endObject;pre;rewards;choices;preAny;<objective>...[;<rep>][;<xp>]
 //            objective = <k|i|o|e><id>,<count>,<text>[;p<map>,<x>,<y>,<f>]
@@ -51,7 +53,7 @@
 //            rep = r<faction>,<standing>: the standing its rewards need (an older
 //                  reader skips it: no objective kind is r)
 //            xp = x<xp>: its full XP reward (an older reader skips it too)
-//   instance kind;forever(1|empty);areaId;map;entrance(map,x,y,f[,a]);levels;<boss>...
+//   instance kind;forever(1|empty);areaId;map;entrance(map,x,y,f[,a][,Amap,Ax,Ay]);levels;<boss>...
 //            a: approximate (the client's corpse point, not the way in)
 //            boss = name,ref,item,item...   ref = <npc> | o<object> (a chest boss), then
 //                   r|e|x when its role is rare|event|optional (none: an encounter);
@@ -79,7 +81,7 @@ const FROM = {
 	pfquest: 'p',
 	questie: 'q',
 	rarescanner: 'r',
-	wowhead: 'w',
+	web: 'w',
 	forever: 'e',
 };
 
@@ -228,11 +230,11 @@ function encodeSpawns(spawns) {
 function encodeNpc(rec) {
 	const flags = `${rec.rare ? 'r' : ''}${rec.elite ? 'e' : ''}${rec.boss ? 'b' : ''}`;
 	const head = [num(rec.level), num(rec.levelMax), rec.faction || '', flags, esc(rec.instance), (rec.roles || []).map(esc).join(','), list(rec.loot)];
-	return [...head, ...encodeSpawns(rec.spawns)].join(';');
+	return [...head, ...encodeSpawns(rec.spawns), ...(rec.subName ? ['t' + esc(rec.subName)] : [])].join(';');
 }
 
 function encodeObject(rec) {
-	return [rec.treasure ? '1' : '', list(rec.loot), ...encodeSpawns(rec.spawns)].join(';');
+	return [rec.treasure ? '1' : '', list(rec.loot), ...encodeSpawns(rec.spawns), ...(rec.mailbox ? ['m' + (rec.faction || '')] : [])].join(';');
 }
 
 function encodeQuest(rec) {
@@ -275,7 +277,7 @@ function encodeInstance(rec) {
 		rec.forever ? '1' : '',
 		num(rec.areaId),
 		num(rec.map),
-		e ? [num(e.map), coord(e.x), coord(e.y), e.f || '', ...(e.approx ? ['a'] : [])].join(',') : '',
+		e ? [num(e.map), coord(e.x), coord(e.y), e.f || '', ...(e.approx || e.A ? [e.approx ? 'a' : ''] : []), ...(e.A ? [num(e.A.map), coord(e.A.x), coord(e.A.y)] : [])].join(',') : '',
 		list(rec.levels),
 	];
 	const bosses = (rec.bosses || []).map((b) => [esc(b.name), bossRef(b), ...(b.items || []).map(num)].join(','));
@@ -381,7 +383,8 @@ function emitToc(version, files) {
 		...require('../i18n/toc').tocLines('Polestar_Codex'),
 		'## Author: Polestar',
 		`## Version: ${version}`,
-		'## Category: Quests',
+		'## Category: Polestar',
+		'## Group: Polestar',
 		'## LoadOnDemand: 1',
 		'## Dependencies: Polestar',
 		'',
@@ -510,22 +513,4 @@ function packOrder(files) {
 		.filter((l) => l && !l.startsWith('#'));
 }
 
-// Inputs a release must not hold (their licences forbid it or are unknown).
-const LOCAL_ONLY_SOURCES = /AtlasLoot|RareScanner|DungeonJournal|dungeons\.json/i;
-
-// A built pack folder -> null when it may ship, else why not (`pack`).
-function releaseRefusal(dir) {
-	const fs = require('node:fs');
-	const path = require('node:path');
-	const file = (name) => path.join(dir, name);
-	if (!fs.existsSync(file(`${ADDON}.toc`))) return 'not built (run `node tools/polestar.js codex build`)';
-	if (!fs.existsSync(file('Meta.lua'))) return 'Meta.lua is missing (run `node tools/polestar.js codex build`)';
-	if (!fs.existsSync(file('LICENSE-DATA.txt'))) return 'LICENSE-DATA.txt is missing (rebuild it with `node tools/polestar.js codex build`)';
-	const meta = fs.readFileSync(file('Meta.lua'), 'utf8');
-	if (/\blocalExtras = true\b/.test(meta)) return 'it is a --local-extras build (AtlasLoot, RareScanner, DungeonJournal); rebuild it with `node tools/polestar.js codex build`';
-	const named = [...meta.matchAll(/\bname = "([^"]*)"/g)].map((m) => m[1]).find((n) => LOCAL_ONLY_SOURCES.test(n));
-	if (named) return `its sources include a local-only input (${named}); rebuild it with \`node tools/polestar.js codex build\``;
-	return null;
-}
-
-module.exports = { emitPack, releaseRefusal, packOrder, emitToc, licenseText, foldName, ADDON, SCHEMA, CHUNK, FROM, SOURCE };
+module.exports = { emitPack, packOrder, emitToc, licenseText, foldName, ADDON, SCHEMA, CHUNK, FROM, SOURCE };

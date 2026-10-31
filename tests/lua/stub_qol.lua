@@ -417,6 +417,9 @@ function GetQuestItemLink(kind, i)
 	return "|Hitem:" .. c.id .. "|h[" .. ((q.items[c.id] or {}).name or "?") .. "]|h"
 end
 function GetQuestMoneyToGet() return q.questMoney end
+-- The quest whose reward panel is open (QuestInfo_GetQuestID's npc branch).
+q.questID = 1
+function GetQuestID() return q.questID end
 function GetQuestReward(i)
 	call("GetQuestReward", i)
 	if not q.landRewards then return end
@@ -637,10 +640,16 @@ function q.step(goals, index)
 	steps[index] = { goals = raw }
 	q.engine.step = index
 	q.engine.view = { index = index, status = "current", goals = views }
-	q.engine.guide = { id = "test", steps = steps }
+	q.engine.guide = { id = "test", pack = q.guidePack or "guides", steps = steps }
 	Polestar.Fire("STEP_CHANGED", index)
 	stub.runTimers()
 end
+
+-- The registry's packs (Core/Guides.lua Guides.Pack): Polestar's own, the
+-- Import page's, and a community pack. q.guidePack picks the step's guide's.
+local Guides = {}
+q.packs = { guides = { id = "guides", official = true }, imported = { id = "imported", imported = true }, yendi = { id = "yendi" } }
+function Guides.Pack(id) return q.packs[id] end
 
 local Nav = {}
 q.Nav = Nav
@@ -715,6 +724,7 @@ function stub.addonLoaded(name)
 		Polestar.Engine = Engine
 		Polestar.Nav = Nav
 		Polestar.Pins = Pins
+		Polestar.Guides = Polestar.Guides or Guides
 		local C = Polestar.Compat
 		function C.MapToWorld(map, x, y, frame)
 			if frame == "e" then return nil end

@@ -46,10 +46,16 @@ const GATHER_ROLES = { herb: 'herb', mine: 'mine' };
 // Entrance points closer than this (map percent) are one entrance.
 const ENTRANCE_RADIUS = 1.5;
 
+// data/recordings/*.json, schema 1 or 2 (config.json and dot files are not
+// sessions). This JS overlay has none of the trust rules the Rust overlay
+// applies (rust/crates/forge-data/src/recordings.rs, docs/RECORDING.md
+// "Trust"), so it reads only the maintainer's own sessions: schema 1, and
+// schema 2 whose contributor is `local`. Other players' recordings reach the
+// data only through forge.
 function readRecordings(dir) {
 	if (!dir || !fs.existsSync(dir)) return [];
 	const out = [];
-	for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort()) {
+	for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.json') && !f.startsWith('.') && f !== 'config.json').sort()) {
 		const p = path.join(dir, file);
 		let rec;
 		try {
@@ -57,7 +63,8 @@ function readRecordings(dir) {
 		} catch (err) {
 			throw new Error(`recording ${file}: ${err.message}`);
 		}
-		if (!rec || rec.schema !== 1 || !Array.isArray(rec.events)) throw new Error(`recording ${file}: expected { schema: 1, events: [...] }`);
+		if (!rec || (rec.schema !== 1 && rec.schema !== 2) || !Array.isArray(rec.events)) throw new Error(`recording ${file}: expected { schema: 1 or 2, events: [...] }`);
+		if (rec.schema === 2 && rec.contributor !== 'local') continue;
 		out.push({ file, rec });
 	}
 	return out;
@@ -601,7 +608,7 @@ function applyRecordings(db, recordings, { spawnOptions, liveMaps } = {}) {
 
 // Same field order as normalize.js builds, whatever the overlay added.
 const NPC_KEYS = ['id', 'name', 'level', 'levelMax', 'rank', 'faction', 'roles', 'spawns', 'instances', 'encounter'];
-const OBJECT_KEYS = ['id', 'name', 'roles', 'spawns', 'instances'];
+const OBJECT_KEYS = ['id', 'name', 'roles', 'faction', 'spawns', 'instances'];
 const QUEST_KEYS = [
 	'id', 'title', 'level', 'minLevel', 'races', 'classes', 'start', 'end', 'pre', 'excl', 'next',
 	'objectives', 'objectiveText', 'zone', 'xp', 'xpSamples', 'rewards', 'skill', 'event', 'source',

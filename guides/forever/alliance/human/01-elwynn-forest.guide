@@ -60,12 +60,16 @@ next forever/alliance/02-westfall
 #   Westbrook trip at 11 instead of at 8: he is level 12 and walks with the
 #   gnolls Riverpaw Gnoll Bounty sends you to. Manhunt (147) moves with it
 #   to the last east pass, where Morgan the Collector walks beside the murlocs.
+#   Gruff is a rare, so the Schedule and The Collector are optional: the step
+#   waits for the armbands, not for him (#553). A player who does not take
+#   The Collector never sees its turn-in, and Manhunt drops out with it: its
+#   accept goes by `when turnedin 123` and its turn-in by `when onquest 147`.
 # - Shipment to Stormwind (61) is taken from William Pestle when Kobold
 #   Candles is handed in; Morgan Pestle takes it on the Stormwind stop of
 #   02-westfall (the simulator took it and never handed it in).
 # - An Apple Treat (91738) is done on the Westbrook trip: its Thunder Applejack
 #   comes from the Applejack Still (91736) north of the garrison, for four
-#   Shiny Red Apples (Wowhead Forever, quest=91736), bought from Homer
+#   Shiny Red Apples (Forever's quest data, quest 91736), bought from Homer
 #   Stonefield at the Stonefield farm. The still is a short walk off the road.
 # - Northshire: Eagan Peltskinner's Wolves Across the Border (33) is taken
 #   after Deputy Willem and Marshal McBride (Willem is at the spawn, Eagan at
@@ -75,6 +79,14 @@ next forever/alliance/02-westfall
 #   handed in to McBride, and Report to Goldshire (54) and The Adventurer
 #   (96627) when Skirmish is: he offers each at once (#310).
 # - Eastvale: Sara Timberlain, on the way in, before Hagar Lowe.
+# - Goldshire, back from the east: The Escape (114) is taken after Marshal
+#   Dughan's turn-ins. Handing in Collecting Kelp (112) starts a short scene
+#   while William Pestle brews the liquor ("just one moment while I concoct
+#   the potion"), and Dughan stands a few yards away (#613).
+# - The Jasperlode Mine: the Mining Tools (91732) lie along the tunnel from
+#   the entrance, so they are picked up on the walk in to the mine's far end
+#   (76), and the Kobold Geomancers (91723) are killed on the way back out,
+#   towards the Tower of Azora (#612).
 #
 # Class quests, as class-only steps (the level 10-12 ones from the last
 # Goldshire stop, about level 12):
@@ -113,7 +125,7 @@ next forever/alliance/02-westfall
 # Elmpaw's Head (91746) starts from the head of Elmpaw, a named elite that
 # roams north-east Elwynn, off the route. The simulator's Stormwind stop at
 # 6 is for Jennea Cannon's book quests (84397, 84398, 84399, 84402: each
-# needs a book that has no known source, and Wowhead lists them at level 60)
+# needs a book that has no known source, and Forever's quest data lists them at level 60)
 # and three level 2 deliveries (332, 333, 334): not worth the walk without
 # the books.
 
@@ -325,12 +337,10 @@ step "Auntie" Bernice Stonefield
   turnin 86
   accept 84
 
-# Goldtooth (41.71,78.03) is inside the Fargodeep Mine, under the hill: "He
-# was always INSIDE the mine, in the back, on the ground level. Stay leftish"
-# (https://www.wowhead.com/forever/npc=327, comments, 2026); "Enter mine 39 82
-# and go to 41 78 to kill him" and "Don't go up the stairs for Goldtooth!"
-# (https://www.wowhead.com/classic/quest=87, comments); "Enter is on 39 83"
-# (https://www.wowhead.com/classic/quest=62, comments). The mouth, 39.5,82.4,
+# Goldtooth (41.71,78.03) is inside the Fargodeep Mine, under the hill,
+# in the back on the ground level, not up the stairs (players' reports on
+# npc 327 and quests 87 and 62, 2026; players report the entrance near
+# 39,82). The mouth, 39.5,82.4,
 # lies between the Kobold Tunnelers outside it (39.33,83.2, 39.6,82.13) and
 # the Kobold Miners inside (39.85,81.06 on). From Billy a straight line to
 # Goldtooth climbs the hill above the mine, so the step ends at the mouth.
@@ -417,15 +427,15 @@ step The gnoll camps
   tip Riverpaw gnolls camp in the hills west of Stone Cairn Lake; the Stolen Enchanting Supplies lie in their camps.
   collect 247805 quest 91725                  -- Stolen Enchanting Supplies
 
-# "The mine entrance is at 61.6,54.1" (https://www.wowhead.com/classic/quest=76, comments).
+# Players report the mine entrance near 61.6,54.1 (quest 76).
 step The Jasperlode Mine's entrance
   goto 61.6,54.1 "Jasperlode Mine"
 
 step The Jasperlode Mine
   tip The mine is south-west of the gnoll camps. Mining Tools lie near the entrance; Kobold Geomancers hold the tunnels.
+  collect 247816 quest 91732                  -- Mining Tools
   complete 76 @60.2,49.2                      -- Walk into the mine
   kill 476 quest 91723                        -- Kobold Geomancer
-  collect 247816 quest 91732                  -- Mining Tools
 
 step The Tower of Azora
   tip Follow the hills south to the tower.
@@ -444,11 +454,11 @@ step Goldshire
   turnin 91751 optional                       -- Helene Peltskinner
   turnin 99131                                -- Jason Mathers
   turnin 112                                  -- William Pestle
-  accept 114
-  turnin 39                                   -- Marshal Dughan
+  turnin 39                                   -- Marshal Dughan, while William brews
   turnin 76
   accept 59
   accept 239
+  accept 114                                  -- William Pestle
   train class
 
 step Maybell Maclure
@@ -476,8 +486,8 @@ step Westbrook Garrison
 step Forest's Edge
   tip Riverpaw Runts and Outrunners hold the hills south of the garrison, along the Westfall border. Gruff Swiftbite, a level 12 gnoll, walks among them and carries the Gold Pickup Schedule: right-click it.
   collect 782 quest 11                        -- Painted Gnoll Armbands
-  collect 1307 x1                             -- Gold Pickup Schedule: Gruff Swiftbite
-  accept 123
+  collect 1307 x1 optional                    -- Gold Pickup Schedule: Gruff Swiftbite
+  accept 123 optional
 
 step Westbrook Garrison
   turnin 11                                   -- Deputy Rainer
@@ -485,6 +495,9 @@ step Westbrook Garrison
 
 step Marshal Dughan
   turnin 123
+
+step Marshal Dughan
+  when turnedin 123
   accept 147
 
 # ---------------------------------------------------------------- The east again
@@ -525,13 +538,16 @@ step The Tower of Azora
 
 step Goldshire
   tip Follow the road west back to Goldshire.
-  turnin 147                                  -- Marshal Dughan
   accept 1685 only Warlock                    -- Remen Marcot: Gakin the Darkbinder in Stormwind takes it
   accept 2998 only Paladin                    -- Brother Wilhelm: Duthorian Rall in Stormwind takes it
   accept 5635 only Priest                     -- Priestess Josetta: High Priestess Laurena in Stormwind takes both
   accept 94774 only Priest
   accept 1860 only Mage                       -- Zaldimar Wefhellt: Jennea Cannon in Stormwind takes it
   train class
+
+step Marshal Dughan
+  when onquest 147
+  turnin 147
 
 step Taming the Beast
   only Hunter
@@ -607,7 +623,7 @@ step Henze Faulk
   only Paladin
   zone Elwynn Forest
   tip Head back out through Goldshire and east to Stone Cairn Lake. Henze Faulk lies south of the lake: use the Symbol of Life on him. The Defias Rogue Wizards around him carry the Defias Script.
-  complete 1786                               -- Use the Symbol of Life on Henze Faulk
+  complete 1786 @72.6,51.41                   -- Use the Symbol of Life on Henze Faulk
   turnin 1786                                 -- Henze Faulk
   accept 1787
   collect 6846 quest 1787.1                   -- Defias Script: Defias Rogue Wizards

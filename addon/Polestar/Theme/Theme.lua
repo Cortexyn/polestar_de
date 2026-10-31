@@ -55,10 +55,12 @@ local SHARED = {
 	rare = { 1, 0.5, 0.32, 1 }, -- rare NPCs (ember; treasures keep object)
 }
 
--- Tints laid on the game's own art (the world map), not on a Polestar
--- ground: the same in every scheme and outside the legibility guard.
+-- Tints laid on the game's own art (the world map), and light laid over
+-- a Polestar ground (the night header's haze), never under text: the same
+-- in every scheme and outside the legibility guard.
 local ART = {
 	mapUnexplored = { 0.6, 0.66, 0.9, 1 }, -- multiplied onto unexplored map overlays
+	haze = { 0.29, 0.376, 0.667, 0.25 }, -- the faint blue haze in a night header (Media glow)
 }
 
 -- Another brand's colour, for its mark only: Discord's Blurple, as its
@@ -243,7 +245,7 @@ Theme.SKIN_ORDER = { "polestar", "halo", "hearth", "forever", "blizzard", "class
 -- See issue #306.
 -- Each entry holds the skin's label so its translations survive in every locale
 -- until the skin returns (the i18n scanner would otherwise flag it as stale).
-local HIDDEN_SKINS = { forever = { label = ns.L["WoW Forever"] } }  -- #306
+local HIDDEN_SKINS = {}
 -- Tests may set Theme._testShowHidden = true to render hidden skins directly.
 Theme._testShowHidden = false
 -- The skins drawn in game colours and controls (the client's check boxes,
@@ -428,17 +430,20 @@ function Theme.SchemeChoices()
 	return out
 end
 
--- The player's class colour, from the client (class colour addons may change
--- it). -> r, g, b | nil
-local function classColor()
-	if not UnitClass then return nil end
-	local _, file = UnitClass("player")
+-- A class's colour (the player's without a class file), from the client
+-- (class colour addons may change it). -> r, g, b | nil
+local function classColor(file)
+	if not file then
+		if not UnitClass then return nil end
+		file = select(2, UnitClass("player"))
+	end
 	if not file then return nil end
 	local c = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(file)
 	if not (c and type(c.r) == "number") then c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[file] end
 	if not (c and type(c.r) == "number") then return nil end
 	return c.r, c.g, c.b
 end
+Theme.ClassColor = classColor
 
 -- One accent source at a time: your own colour, your class's (ui.classAccent)
 -- or EllesmereUI's. Whether the accent currently comes from the class:
@@ -501,11 +506,11 @@ function Theme.GameSkin(key)
 end
 
 function Theme.SkinChoices()
-	-- "forever" is hidden while its border and progress bar are fixed (#306)
 	return {
 		{ value = "polestar", text = ns.L["Polestar"] },
 		{ value = "halo", text = ns.L["Halo"] },
 		{ value = "hearth", text = ns.L["Hearth"] },
+		{ value = "forever", text = ns.L["WoW Forever"] },
 		{ value = "blizzard", text = ns.L["Blizzard"] },
 		{ value = "classic", text = ns.L["Classic"] },
 	}
@@ -776,6 +781,8 @@ for _, v in ipairs({ "accept", "turnin", "complete", "kill", "collect", "goto", 
 	"hearth", "getfp", "fly", "train", "buy", "vendor", "level", "note", "skill", "learn", "craft", "rep", "explore", "achieve" }) do
 	VERB_ICON[v] = MEDIA .. "UI\\icon-" .. v
 end
+VERB_ICON.enter = VERB_ICON.goto
+VERB_ICON.cast = VERB_ICON.use
 
 function Theme.VerbIcon(t)
 	return VERB_ICON[t] or VERB_ICON.note
@@ -856,11 +863,13 @@ local METRICS = {
 		guideProgress = 14, guideGrip = 8, guideFoot = 28, guideUpRow = 20, guideUpToggle = 26, guideNavGap = 4,
 	},
 }
--- The game's looks take Hearth's sizes and type.
+-- The game's looks take Hearth's sizes and type; WoW Forever's guide window
+-- keeps its rows and the lit goal clear of its bronze border (#306).
 for _, k in ipairs({ "forever", "blizzard", "classic" }) do
 	METRICS[k] = METRICS.hearth
 	SKIN_ROLES[k] = SKIN_ROLES.hearth
 end
+METRICS.forever = setmetatable({ guidePad = 18, guideLitInset = 10, guideRowPad = 4, guideCheckIn = 10, guideCheckMiddle = true }, { __index = METRICS.hearth })
 Theme.METRICS = METRICS
 
 function Theme.Metric(key, house)
@@ -1646,7 +1655,7 @@ local LOOKS = {
 	["ui.accent"] = true, ["ui.font"] = true, ["ui.skin"] = true, ["ui.scheme"] = true, ["ui.bgColor"] = true, ["ui.bgOpacity"] = true,
 	["ui.brightness"] = true, ["ui.matchAccent"] = true, ["ui.classAccent"] = true, ["ui.matchFont"] = true,
 	["ui.border"] = true, ["ui.borderColor"] = true, ["ui.borderAccent"] = true, ["ui.borderSize"] = true,
-	["ui.band"] = true, ["ui.shadow"] = true, ["nav.arrowColor"] = true, ["nav.arrowNearColor"] = true,
+	["ui.band"] = true, ["ui.shadow"] = true, ["nav.arrowColor"] = true, ["nav.arrowNearColor"] = true, ["nav.mapIcons"] = true,
 	["ui"] = true, ["nav"] = true, [""] = true,
 }
 

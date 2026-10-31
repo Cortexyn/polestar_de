@@ -10,10 +10,7 @@ on:
     - cron: '17 4 * * *'
   workflow_dispatch:
 
-permissions:
-  issues: write
-  # The action keeps its progress in the Actions cache between runs.
-  actions: write
+permissions: {}
 
 concurrency:
   group: stale
@@ -23,11 +20,15 @@ jobs:
     name: Needs-info issues
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      issues: write
+      # The action keeps its progress in the Actions cache between runs.
+      actions: write
     steps:
       - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         with:
           only-issue-labels: needs-info
-          exempt-issue-labels: confirmed
+          exempt-issue-labels: confirmed,on-hold
           stale-issue-label: stale
           days-before-issue-stale: 14
           days-before-issue-close: 7

@@ -34,7 +34,7 @@ return {
 	-- {npc:5901} Islen Waterseer · {area:392} Ratchet
 	["{npc:5901} camps on the shore just north of {area:392}."] = "{npc:5901} lagert am Ufer gleich nördlich von {area:392}.",
 	-- {area:2479} Emerald Sanctuary · {zone:1448} Felwood
-	["Cleansed Water goes to the {area:2479} in {zone:1448}: keep it for later."] = "Gesäubertes Wasser wird zum Teufelswald gebracht führt zum {area:2479} im {zone:1448}: Behalte sie für später.",
+	["Cleansed Water goes to the {area:2479} in {zone:1448}: keep it for later."] = "Das gereinigte Wasser geht zum {area:2479} im {zone:1448}: Behalte es für später.",
 
 	-- Step 7: Fly to Orgrimmar
 	-- {area:1637} Orgrimmar
@@ -95,7 +95,7 @@ return {
 	-- Step 20: Owen Thadd
 	-- {quest:79095} The Apothecary's Metaphysical Primer · {area:159} Brill
 	-- plural, as words: Library Books = {object:386691} Library Book
-	["Only with {quest:79095} from {area:159}'s alchemy shop in your bags (the Library Books guide)"] = "",
+	["Only with {quest:79095} from {area:159}'s alchemy shop in your bags (the Library Books guide)"] = "Nur mit {quest:79095} aus dem Alchemieladen von {area:159} in deinen Taschen (der Guide Bibliotheksbücher)",
 
 	-- Step 21: Prompt Potion Runner
 	-- {npc:11044} Doctor Martin Felben

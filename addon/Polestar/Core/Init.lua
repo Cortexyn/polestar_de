@@ -31,7 +31,7 @@ function ns.DocsURL()
 end
 
 -- The Polestar Discord's invite: where players report problems (UI/Report.lua).
-ns.DiscordURL = "https://discord.gg/vMbee6F2e9"
+ns.DiscordURL = "https://discord.gg/polestar"
 -- A new issue on Polestar's GitHub: the report window fills one in (UI/Report.lua).
 ns.IssueURL = "https://github.com/fitzforge/polestar/issues/new"
 
@@ -460,7 +460,11 @@ function ns.CharState()
 	if type(s.when) ~= "table" then s.when = {} end
 	-- Map id -> true: the dungeons the player chose to run in leveling guides (`when dungeon`; Engine.ChooseDungeon).
 	if type(s.dungeons) ~= "table" then s.dungeons = {} end
+	-- Quest id -> "do" | "skip": the player's answer at a group quest in leveling guides (`when group`; Engine.AnswerGroup).
+	if type(s.groupQuests) ~= "table" then s.groupQuests = {} end
 	if type(s.flags) ~= "table" then s.flags = {} end
+	-- Quest id -> true: the quests the player pinned as along the way (#644; Engine.PinQuest).
+	if type(s.pinnedQuests) ~= "table" then s.pinnedQuests = {} end
 	return s
 end
 
